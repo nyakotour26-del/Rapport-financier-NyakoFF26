@@ -323,6 +323,36 @@
             margin: 0 auto 15px;
         }
         
+        .error-message {
+            background-color: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .retry-options {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+            display: none;
+        }
+        
+        .retry-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .retry-buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -335,6 +365,10 @@
             .calendar-day {
                 min-height: 60px;
                 padding: 5px;
+            }
+            
+            .retry-buttons {
+                flex-direction: column;
             }
         }
     </style>
@@ -365,6 +399,16 @@
                 </div>
             </form>
             
+            <div class="retry-options" id="retryOptions">
+                <h3>Problème de chargement ?</h3>
+                <p>Essayez une autre méthode de connexion :</p>
+                <div class="retry-buttons">
+                    <button id="tryDirect" style="background-color: #3498db;">Méthode Standard</button>
+                    <button id="tryProxy" style="background-color: #9b59b6;">Méthode Alternative 1</button>
+                    <button id="tryCors" style="background-color: #e67e22;">Méthode Alternative 2</button>
+                </div>
+            </div>
+            
             <div class="calendar-container">
                 <div class="calendar">
                     <div class="calendar-header">
@@ -394,7 +438,7 @@
                 <button id="closeResults">✕ Fermer</button>
             </div>
             <div class="result-content" id="resultContent">
-                <!-- Les résultats seront affichés ici -->
+                <!-- Les résultats seront affichées ici -->
             </div>
         </section>
     </div>
@@ -415,29 +459,122 @@
             document.getElementById('nextMonth').addEventListener('click', nextMonth);
             document.getElementById('showAllButton').addEventListener('click', showAllData);
             document.getElementById('closeResults').addEventListener('click', closeResults);
+            document.getElementById('tryDirect').addEventListener('click', () => loadDataFromGoogleSheets('direct'));
+            document.getElementById('tryProxy').addEventListener('click', () => loadDataFromGoogleSheets('proxy'));
+            document.getElementById('tryCors').addEventListener('click', () => loadDataFromGoogleSheets('cors'));
             
-            loadDataFromGoogleSheets();
+            // Chargement automatique avec la méthode directe
+            loadDataFromGoogleSheets('direct');
         });
 
-        async function loadDataFromGoogleSheets() {
+        async function loadDataFromGoogleSheets(method = 'direct') {
+            console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
             document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('retryOptions').style.display = 'none';
+            clearErrorMessages();
             
             try {
-                let response = await fetch(GOOGLE_SHEETS_URL);
+                let response;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                
+                switch(method) {
+                    case 'direct':
+                        response = await fetch(GOOGLE_SHEETS_URL, {
+                            signal: controller.signal,
+                            headers: {
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
+                        });
+                        break;
+                        
+                    case 'proxy':
+                        const proxyUrl = `https://cors-anywhere.herokuapp.com/${GOOGLE_SHEETS_URL}`;
+                        response = await fetch(proxyUrl, {
+                            signal: controller.signal,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        break;
+                        
+                    case 'cors':
+                        const corsProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEETS_URL)}`;
+                        response = await fetch(corsProxy, {
+                            signal: controller.signal
+                        });
+                        break;
+                }
+                
+                clearTimeout(timeoutId);
                 
                 if (response.ok) {
                     const csvText = await response.text();
+                    console.log('✅ Données chargées avec succès');
                     processCSVData(csvText);
                     return;
                 }
-                throw new Error(`Échec du chargement: ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 
             } catch (error) {
-                console.log('❌ Échec:', error.message);
-                alert('Impossible de charger les données. Vérifiez votre connexion internet.');
+                console.log(`❌ Échec avec ${method}:`, error.message);
+                
+                // Essayer la méthode suivante automatiquement
+                if (method === 'direct') {
+                    console.log('🔄 Essai automatique avec méthode proxy...');
+                    loadDataFromGoogleSheets('proxy');
+                } else if (method === 'proxy') {
+                    console.log('🔄 Essai automatique avec méthode CORS...');
+                    loadDataFromGoogleSheets('cors');
+                } else {
+                    // Toutes les méthodes ont échoué, afficher les options de rechargement
+                    showRetryOptions();
+                    showError(`Impossible de charger les données. Vérifiez:<br>
+                    1. Votre connexion internet<br>
+                    2. Que le Google Sheet est bien publié<br>
+                    3. Essayez une méthode alternative ci-dessous`);
+                }
             }
         }
 
+        function showRetryOptions() {
+            document.getElementById('retryOptions').style.display = 'block';
+        }
+
+        function processCSVData(csvText) {
+            try {
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error('Le fichier CSV est vide');
+                }
+                
+                const lines = parseCSV(csvText);
+                
+                if (!lines || lines.length < 5) {
+                    throw new Error('Format de données invalide');
+                }
+                
+                headers = lines[3] || [];
+                sheetData = lines.slice(4).filter(row => 
+                    row && row.some(cell => cell && cell.trim() !== '')
+                );
+                
+                console.log(`📊 ${sheetData.length} lignes de données chargées`);
+                
+                extractDatesWithData();
+                renderCalendar();
+                displayGlobalStats();
+                
+            } catch (error) {
+                console.error('❌ Erreur de traitement:', error);
+                showError(`Erreur de traitement des données: ${error.message}`);
+                showRetryOptions();
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        // Les autres fonctions restent identiques au code précédent...
         function parseCSV(csvText) {
             const lines = [];
             let currentLine = [];
@@ -478,26 +615,6 @@
             return lines;
         }
         
-        function processCSVData(csvText) {
-            try {
-                const lines = parseCSV(csvText);
-                
-                headers = lines[3] || [];
-                sheetData = lines.slice(4).filter(row => 
-                    row && row.some(cell => cell && cell.trim() !== '')
-                );
-                
-                extractDatesWithData();
-                renderCalendar();
-                displayGlobalStats();
-                
-            } catch (error) {
-                console.error('❌ Erreur de traitement:', error);
-            } finally {
-                document.getElementById('loadingIndicator').style.display = 'none';
-            }
-        }
-        
         function extractDatesWithData() {
             datesWithData = [];
             
@@ -518,6 +635,7 @@
             });
             
             datesWithData.sort((a, b) => a.date - b.date);
+            console.log(`📅 ${datesWithData.length} dates avec données trouvées`);
         }
         
         function parseDate(dateStr) {
@@ -540,6 +658,7 @@
                 return nativeDate;
             }
             
+            console.warn(`Impossible de parser la date: ${dateStr}`);
             return null;
         }
         
@@ -793,14 +912,12 @@
 
             let html = '<table class="financial-table">';
             
-            // En-tête du tableau
             html += '<tr><th>Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
             html += '</tr>';
             
-            // Lignes des catégories
             const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
             categories.forEach(category => {
                 html += `<tr><td class="category">${category}</td>`;
@@ -813,7 +930,6 @@
                 html += '</tr>';
             });
             
-            // Ligne RECETTES TOTALES (verte)
             html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const cols = columnMapping[currency];
@@ -825,7 +941,6 @@
             });
             html += '</tr>';
             
-            // Ligne DEPENSES TOTALES (rouge)
             html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const cols = columnMapping[currency];
@@ -834,7 +949,6 @@
             });
             html += '</tr>';
             
-            // Ligne DIFFERENCE (bleu ciel)
             html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const cols = columnMapping[currency];
@@ -893,7 +1007,6 @@
                 }
             };
 
-            // Calcul des totaux globaux
             const globalTotals = {};
             Object.keys(columnMapping).forEach(currency => {
                 globalTotals[currency] = {
@@ -916,14 +1029,12 @@
 
             let html = '<table class="financial-table">';
             
-            // En-tête du tableau
             html += '<tr><th>Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
             html += '</tr>';
             
-            // Lignes des catégories
             const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
             categories.forEach(category => {
                 html += `<tr><td class="category">${category}</td>`;
@@ -934,7 +1045,6 @@
                 html += '</tr>';
             });
             
-            // Ligne RECETTES TOTALES
             html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
@@ -942,7 +1052,6 @@
             });
             html += '</tr>';
             
-            // Ligne DEPENSES TOTALES
             html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const depenses = globalTotals[currency]['Dépenses'];
@@ -950,7 +1059,6 @@
             });
             html += '</tr>';
             
-            // Ligne DIFFERENCE
             html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
@@ -1029,6 +1137,19 @@
         function closeResults() {
             document.getElementById('resultsSection').style.display = 'none';
             currentSearchTerm = '';
+        }
+
+        function showError(message) {
+            const searchSection = document.querySelector('.search-section');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = message;
+            searchSection.appendChild(errorDiv);
+        }
+
+        function clearErrorMessages() {
+            const errorMessages = document.querySelectorAll('.error-message');
+            errorMessages.forEach(msg => msg.remove());
         }
     </script>
 </body>
