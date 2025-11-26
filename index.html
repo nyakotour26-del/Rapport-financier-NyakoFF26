@@ -300,6 +300,96 @@
             background-color: #6c7a7d;
         }
         
+        /* NOUVEAU: Style pour le bouton source protégé */
+        .source-button {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .source-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .source-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* MODAL POUR MOT DE PASSE */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .modal-content h3 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+        
+        .password-input {
+            margin: 20px 0;
+        }
+        
+        .password-input input {
+            text-align: center;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .error-message-password {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
         /* MODIFICATION: Ajout du conteneur de défilement pour les tableaux financiers */
         .financial-table-container {
             width: 100%;
@@ -682,6 +772,10 @@
                 max-width: 100%;
             }
             
+            .source-button {
+                max-width: 100%;
+            }
+            
             .country-summary-table {
                 font-size: 12px;
             }
@@ -816,6 +910,11 @@
                 <button class="external-button recap" onclick="window.open('https://nyakotour26-del.github.io/RECAP-GL/', '_blank')">
                     📈 Recap GL
                 </button>
+                
+                <!-- NOUVEAU: Bouton d'accès au fichier source (désactivé par défaut) -->
+                <button class="source-button" id="sourceButton" disabled onclick="showPasswordModal()">
+                    🔒 Accès Fichier Source
+                </button>
             </div>
             
             <h2 style="margin-top: 30px;">🌍 RÉCAPITULATIF PAR PAYS</h2>
@@ -886,8 +985,31 @@
         </section>
     </div>
 
+    <!-- NOUVEAU: Modal pour le mot de passe -->
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-content">
+            <h3>🔒 Accès Protégé</h3>
+            <p>Veuillez entrer le mot de passe pour accéder au fichier source :</p>
+            
+            <div class="password-input">
+                <input type="password" id="passwordInput" placeholder="Mot de passe" autocomplete="off">
+            </div>
+            
+            <div class="error-message-password" id="passwordError">
+                ❌ Mot de passe incorrect. Veuillez réessayer.
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="closePasswordModal()" class="secondary">Annuler</button>
+                <button onclick="checkPassword()" style="background-color: #27ae60;">Valider</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
+        const SOURCE_FILE_URL = 'https://docs.google.com/spreadsheets/d/1OrJcM5Sud9KbKqwdFhL3EEX0Rn3EW2B9pl6LEhlQj2g/edit?gid=1011617752#gid=1011617752';
+        const CORRECT_PASSWORD = 'finadmin';
         
         let sheetData = [];
         let headers = [];
@@ -895,6 +1017,7 @@
         let currentDate = new Date(2026, 3, 1);
         let selectedDate = null;
         let currentSearchTerm = '';
+        let isAuthenticated = false;
         
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('searchForm').addEventListener('submit', handleSearch);
@@ -915,10 +1038,167 @@
                 });
             });
             
+            // Activer le bouton source après chargement des données
+            document.getElementById('sourceButton').addEventListener('click', showPasswordModal);
+            
+            // Entrée pour valider le mot de passe
+            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+            
             // Chargement automatique avec la méthode directe
             loadDataFromGoogleSheets('direct');
         });
 
+        // NOUVELLE FONCTION: Afficher le modal de mot de passe
+        function showPasswordModal() {
+            if (!isAuthenticated) {
+                document.getElementById('passwordModal').style.display = 'flex';
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordError').style.display = 'none';
+                document.getElementById('passwordInput').focus();
+            } else {
+                // Si déjà authentifié, ouvrir directement le fichier
+                window.open(SOURCE_FILE_URL, '_blank');
+            }
+        }
+
+        // NOUVELLE FONCTION: Fermer le modal de mot de passe
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+        }
+
+        // NOUVELLE FONCTION: Vérifier le mot de passe
+        function checkPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordError = document.getElementById('passwordError');
+            const enteredPassword = passwordInput.value.trim();
+            
+            if (enteredPassword === CORRECT_PASSWORD) {
+                isAuthenticated = true;
+                closePasswordModal();
+                
+                // Activer le bouton définitivement
+                const sourceButton = document.getElementById('sourceButton');
+                sourceButton.disabled = false;
+                sourceButton.innerHTML = '📁 Accès Fichier Source';
+                sourceButton.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
+                
+                // Ouvrir le fichier source
+                window.open(SOURCE_FILE_URL, '_blank');
+                
+                // Afficher un message de succès
+                showTemporaryMessage('✅ Accès autorisé au fichier source', 'success');
+            } else {
+                passwordError.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+                
+                // Animation de secousse pour l'input
+                passwordInput.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    passwordInput.style.animation = '';
+                }, 500);
+            }
+        }
+
+        // NOUVELLE FONCTION: Afficher un message temporaire
+        function showTemporaryMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: var(--border-radius);
+                color: white;
+                font-weight: bold;
+                z-index: 1001;
+                box-shadow: var(--box-shadow);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            if (type === 'success') {
+                messageDiv.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
+            } else {
+                messageDiv.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+            }
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
+
+        // Ajout des animations CSS pour les messages
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // MODIFICATION: Activer le bouton source après chargement des données
+        function processCSVData(csvText) {
+            try {
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error('Le fichier CSV est vide');
+                }
+                
+                const lines = parseCSV(csvText);
+                
+                if (!lines || lines.length < 5) {
+                    throw new Error('Format de données invalide');
+                }
+                
+                headers = lines[3] || [];
+                sheetData = lines.slice(4).filter(row => 
+                    row && row.some(cell => cell && cell.trim() !== '')
+                );
+                
+                console.log(`📊 ${sheetData.length} lignes de données chargées`);
+                
+                extractDatesWithData();
+                renderCalendar();
+                displayGlobalStats();
+                
+                // Activer le bouton source après chargement réussi
+                const sourceButton = document.getElementById('sourceButton');
+                sourceButton.disabled = false;
+                sourceButton.innerHTML = '🔓 Accès Fichier Source';
+                
+            } catch (error) {
+                console.error('❌ Erreur de traitement:', error);
+                showError(`Erreur de traitement des données: ${error.message}`);
+                showRetryOptions();
+            } finally {
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        // Le reste du code JavaScript reste inchangé...
         async function loadDataFromGoogleSheets(method = 'direct') {
             console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
             document.getElementById('loadingIndicator').style.display = 'block';
@@ -990,40 +1270,9 @@
             }
         }
 
+        // ... Le reste des fonctions JavaScript existantes reste inchangé ...
         function showRetryOptions() {
             document.getElementById('retryOptions').style.display = 'block';
-        }
-
-        function processCSVData(csvText) {
-            try {
-                if (!csvText || csvText.trim().length === 0) {
-                    throw new Error('Le fichier CSV est vide');
-                }
-                
-                const lines = parseCSV(csvText);
-                
-                if (!lines || lines.length < 5) {
-                    throw new Error('Format de données invalide');
-                }
-                
-                headers = lines[3] || [];
-                sheetData = lines.slice(4).filter(row => 
-                    row && row.some(cell => cell && cell.trim() !== '')
-                );
-                
-                console.log(`📊 ${sheetData.length} lignes de données chargées`);
-                
-                extractDatesWithData();
-                renderCalendar();
-                displayGlobalStats();
-                
-            } catch (error) {
-                console.error('❌ Erreur de traitement:', error);
-                showError(`Erreur de traitement des données: ${error.message}`);
-                showRetryOptions();
-            } finally {
-                document.getElementById('loadingIndicator').style.display = 'none';
-            }
         }
 
         function parseCSV(csvText) {
