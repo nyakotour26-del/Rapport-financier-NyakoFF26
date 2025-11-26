@@ -408,7 +408,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 15px;
-            margin: 20px 0;
+            margin: 30px 0 20px 0;
             justify-content: center;
         }
         
@@ -444,11 +444,23 @@
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
         
-        .country-summary-table {
+        /* NOUVEAU: Conteneur pour le défilement horizontal */
+        .table-scroll-container {
             width: 100%;
-            border-collapse: collapse;
+            overflow-x: auto;
             margin: 20px 0;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .country-summary-table {
+            width: auto;
+            min-width: 100%;
+            border-collapse: collapse;
             font-size: 14px;
+            margin: 0;
         }
         
         .country-summary-table th {
@@ -458,17 +470,23 @@
             padding: 12px;
             text-align: center;
             border: 1px solid #ddd;
+            white-space: nowrap;
         }
         
         .country-summary-table td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: right;
+            white-space: nowrap;
         }
         
         .country-summary-table .date-cell {
             text-align: left;
             font-weight: bold;
+            position: sticky;
+            left: 0;
+            background: #f8f9fa;
+            z-index: 1;
         }
         
         .country-summary-table .total-row {
@@ -489,6 +507,23 @@
         .country-summary-table .sub-header {
             background: #2980b9;
             color: white;
+        }
+        
+        /* Indicateur de défilement pour mobile */
+        .scroll-hint {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .scroll-hint::after {
+            content: "← →";
+            display: block;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 5px;
         }
         
         @keyframes spin {
@@ -530,6 +565,27 @@
             .country-summary-table {
                 font-size: 12px;
             }
+            
+            .country-summary-table th,
+            .country-summary-table td {
+                padding: 8px 6px;
+            }
+            
+            /* Afficher l'indicateur de défilement sur mobile */
+            .scroll-hint {
+                display: block;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .country-summary-table {
+                font-size: 11px;
+            }
+            
+            .country-summary-table th,
+            .country-summary-table td {
+                padding: 6px 4px;
+            }
         }
     </style>
 </head>
@@ -543,7 +599,11 @@
         <section class="stats-section" id="statsSection">
             <h2>📊 STATISTIQUES GLOBALES</h2>
             
-            <!-- Nouvelle section pour les boutons externes -->
+            <div id="globalStats">
+                <!-- Les statistiques globales seront affichées ici -->
+            </div>
+            
+            <!-- Nouvelle section pour les boutons externes - Positionnée sous le tableau -->
             <div class="external-buttons">
                 <button class="external-button rubriques" onclick="window.open('https://nyakotour26-del.github.io/recap_DETAILS/', '_blank')">
                     📋 Rubriques Détails
@@ -551,10 +611,6 @@
                 <button class="external-button recap" onclick="window.open('https://nyakotour26-del.github.io/RECAP-GL/', '_blank')">
                     📈 Recap GL
                 </button>
-            </div>
-            
-            <div id="globalStats">
-                <!-- Les statistiques globales seront affichées ici -->
             </div>
             
             <h2 style="margin-top: 30px;">🌍 RÉCAPITULATIF PAR PAYS</h2>
@@ -1402,35 +1458,37 @@
                 }
             };
             
-            // Créer le tableau récapitulatif
+            // Créer le tableau récapitulatif avec conteneur de défilement
             let html = `
                 <div class="search-stats">
                     <strong>${countryData.length} date(s) trouvée(s)</strong> pour : ${pays}
                 </div>
-                <table class="country-summary-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2">Date</th>
-                            <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
-                            <th colspan="4" class="currency-header">Euro</th>
-                            <th colspan="4" class="currency-header">Banque Euro</th>
-                        </tr>
-                        <tr class="sub-header">
-                            <th>Ventes</th>
-                            <th>Collecte</th>
-                            <th>Don</th>
-                            <th>Dépenses</th>
-                            <th>Ventes</th>
-                            <th>Collecte</th>
-                            <th>Don</th>
-                            <th>Dépenses</th>
-                            <th>Ventes</th>
-                            <th>Collecte</th>
-                            <th>Don</th>
-                            <th>Dépenses</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
+                <div class="table-scroll-container">
+                    <table class="country-summary-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Date</th>
+                                <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
+                                <th colspan="4" class="currency-header">Euro</th>
+                                <th colspan="4" class="currency-header">Banque Euro</th>
+                            </tr>
+                            <tr class="sub-header">
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
             // Variables pour les totaux
@@ -1515,8 +1573,9 @@
             `;
             
             html += `
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             `;
             
             // Afficher les résultats
