@@ -175,12 +175,22 @@
             margin-bottom: 20px;
         }
         
+        /* MODIFICATION: Calendrier scrollable horizontalement */
+        .calendar-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 15px;
+        }
+        
         .calendar {
-            flex: 1;
-            min-width: 300px;
+            min-width: 600px; /* Largeur minimale pour assurer la lisibilité */
             background: white;
             border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
             padding: 15px;
         }
         
@@ -195,6 +205,7 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 5px;
+            min-width: 600px;
         }
         
         .calendar-day-header {
@@ -203,6 +214,7 @@
             padding: 8px;
             background-color: var(--light-color);
             border-radius: 4px;
+            min-width: 70px;
         }
         
         .calendar-day {
@@ -213,6 +225,7 @@
             transition: background-color 0.2s;
             position: relative;
             min-height: 80px;
+            min-width: 70px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -629,6 +642,22 @@
             .calendar-day {
                 min-height: 60px;
                 padding: 5px;
+                min-width: 60px;
+            }
+            
+            .calendar-day-header {
+                min-width: 60px;
+                padding: 6px;
+            }
+            
+            .calendar-grid {
+                min-width: 500px;
+                gap: 3px;
+            }
+            
+            .calendar {
+                min-width: 500px;
+                padding: 10px;
             }
             
             .retry-buttons {
@@ -722,6 +751,23 @@
             h1 {
                 font-size: 1.7em;
             }
+            
+            .calendar-grid {
+                min-width: 450px;
+            }
+            
+            .calendar {
+                min-width: 450px;
+            }
+            
+            .calendar-day {
+                min-width: 55px;
+                min-height: 55px;
+            }
+            
+            .calendar-day-header {
+                min-width: 55px;
+            }
         }
     </style>
 </head>
@@ -736,6 +782,7 @@
             <div class="currency-decoration banque">🏦</div>
             
             <div class="header-content">
+                <!-- MODIFICATION: "Banque Euro" retiré du titre -->
                 <h1>💰 RAPPORT FINANCIER TOURNÉE 2026</h1>
                 <p>Navigation par date et recherche dans les données financières</p>
                 
@@ -804,7 +851,8 @@
                 </div>
             </div>
             
-            <div class="calendar-container">
+            <!-- MODIFICATION: Calendrier dans un conteneur scrollable -->
+            <div class="calendar-scroll-container">
                 <div class="calendar">
                     <div class="calendar-header">
                         <button id="prevMonth" class="secondary">◀</button>
