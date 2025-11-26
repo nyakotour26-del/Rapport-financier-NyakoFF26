@@ -353,6 +353,104 @@
             min-width: 120px;
         }
         
+        .country-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .country-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 150px;
+            max-width: 200px;
+        }
+        
+        .country-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .country-button.suisse {
+            background-color: #e74c3c;
+        }
+        
+        .country-button.france {
+            background-color: #2980b9;
+        }
+        
+        .country-button.allemagne {
+            background-color: #2c3e50;
+        }
+        
+        .country-button.belgique {
+            background-color: #f39c12;
+        }
+        
+        .country-button.wales {
+            background-color: #27ae60;
+        }
+        
+        .country-button.angleterre {
+            background-color: #9b59b6;
+        }
+        
+        .country-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        
+        .country-summary-table th {
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+        
+        .country-summary-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        
+        .country-summary-table .date-cell {
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .country-summary-table .total-row {
+            background: #d1ecf1;
+            font-weight: bold;
+        }
+        
+        .country-summary-table .currency-column {
+            background: #f8f9fa;
+        }
+        
+        .country-summary-table .currency-header {
+            background: #3498db;
+            color: white;
+            font-size: 1.1em;
+        }
+        
+        .country-summary-table .sub-header {
+            background: #2980b9;
+            color: white;
+        }
+        
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -370,6 +468,19 @@
             .retry-buttons {
                 flex-direction: column;
             }
+            
+            .country-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .country-button {
+                max-width: 100%;
+            }
+            
+            .country-summary-table {
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -384,6 +495,16 @@
             <h2>📊 STATISTIQUES GLOBALES</h2>
             <div id="globalStats">
                 <!-- Les statistiques globales seront affichées ici -->
+            </div>
+            
+            <h2 style="margin-top: 30px;">🌍 RÉCAPITULATIF PAR PAYS</h2>
+            <div class="country-buttons" id="countryButtons">
+                <button class="country-button suisse" data-pays="SUISSE">🇨🇭 SUISSE</button>
+                <button class="country-button france" data-pays="FRANCE">🇫🇷 FRANCE</button>
+                <button class="country-button allemagne" data-pays="ALLEMAGNE">🇩🇪 ALLEMAGNE</button>
+                <button class="country-button belgique" data-pays="BELGIQUE">🇧🇪 BELGIQUE</button>
+                <button class="country-button wales" data-pays="WALES">🏴󠁧󠁢󠁷󠁬󠁳󠁿 WALES</button>
+                <button class="country-button angleterre" data-pays="ANGLETERRE">🏴󠁧󠁢󠁥󠁮󠁧󠁿 ANGLETERRE</button>
             </div>
         </section>
         
@@ -462,6 +583,15 @@
             document.getElementById('tryDirect').addEventListener('click', () => loadDataFromGoogleSheets('direct'));
             document.getElementById('tryProxy').addEventListener('click', () => loadDataFromGoogleSheets('proxy'));
             document.getElementById('tryCors').addEventListener('click', () => loadDataFromGoogleSheets('cors'));
+            
+            // Ajouter les événements pour les boutons de pays
+            const countryButtons = document.querySelectorAll('.country-button');
+            countryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const pays = this.getAttribute('data-pays');
+                    showCountrySummary(pays);
+                });
+            });
             
             // Chargement automatique avec la méthode directe
             loadDataFromGoogleSheets('direct');
@@ -574,7 +704,6 @@
             }
         }
 
-        // Les autres fonctions restent identiques au code précédent...
         function parseCSV(csvText) {
             const lines = [];
             let currentLine = [];
@@ -1150,6 +1279,195 @@
         function clearErrorMessages() {
             const errorMessages = document.querySelectorAll('.error-message');
             errorMessages.forEach(msg => msg.remove());
+        }
+        
+        // Nouvelle fonction pour afficher le récapitulatif par pays
+        function showCountrySummary(pays) {
+            console.log(`Affichage du récapitulatif pour ${pays}`);
+            
+            // Filtrer les données par pays
+            const countryData = sheetData.filter(row => {
+                const rowPays = row[2] || '';
+                return rowPays.toUpperCase() === pays.toUpperCase();
+            });
+            
+            if (countryData.length === 0) {
+                alert(`Aucune donnée trouvée pour ${pays}`);
+                return;
+            }
+            
+            // Déterminer la devise principale en fonction du pays
+            let mainCurrency = 'Euro'; // Par défaut
+            let mainCurrencyLabel = 'Euro';
+            
+            if (pays.toUpperCase() === 'SUISSE') {
+                mainCurrency = 'Franc Suisse';
+                mainCurrencyLabel = 'Franc Suisse';
+            } else if (pays.toUpperCase() === 'ANGLETERRE' || pays.toUpperCase() === 'WALES') {
+                mainCurrency = 'Livre';
+                mainCurrencyLabel = 'Livre Sterling';
+            }
+            
+            // Colonnes pour chaque catégorie selon la devise
+            const columnMapping = {
+                'Ariary': {
+                    'Ventes': 3,
+                    'Collecte': 4,
+                    'Don': 5,
+                    'Dépenses': 6
+                },
+                'Euro': {
+                    'Ventes': 7,
+                    'Collecte': 8,
+                    'Don': 9,
+                    'Dépenses': 10
+                },
+                'Franc Suisse': {
+                    'Ventes': 11,
+                    'Collecte': 12,
+                    'Don': 13,
+                    'Dépenses': 14
+                },
+                'Livre': {
+                    'Ventes': 15,
+                    'Collecte': 16,
+                    'Don': 17,
+                    'Dépenses': 18
+                },
+                'Banque Euro': {
+                    'Ventes': 19,
+                    'Collecte': 20,
+                    'Don': 21,
+                    'Dépenses': 22
+                }
+            };
+            
+            // Créer le tableau récapitulatif
+            let html = `
+                <div class="search-stats">
+                    <strong>${countryData.length} date(s) trouvée(s)</strong> pour : ${pays}
+                </div>
+                <table class="country-summary-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Date</th>
+                            <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
+                            <th colspan="4" class="currency-header">Euro</th>
+                            <th colspan="4" class="currency-header">Banque Euro</th>
+                        </tr>
+                        <tr class="sub-header">
+                            <th>Ventes</th>
+                            <th>Collecte</th>
+                            <th>Don</th>
+                            <th>Dépenses</th>
+                            <th>Ventes</th>
+                            <th>Collecte</th>
+                            <th>Don</th>
+                            <th>Dépenses</th>
+                            <th>Ventes</th>
+                            <th>Collecte</th>
+                            <th>Don</th>
+                            <th>Dépenses</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Variables pour les totaux
+            let totalMainVentes = 0, totalMainCollecte = 0, totalMainDon = 0, totalMainDepenses = 0;
+            let totalEuroVentes = 0, totalEuroCollecte = 0, totalEuroDon = 0, totalEuroDepenses = 0;
+            let totalBanqueVentes = 0, totalBanqueCollecte = 0, totalBanqueDon = 0, totalBanqueDepenses = 0;
+            
+            // Ajouter chaque ligne de données
+            countryData.forEach(row => {
+                const dateStr = row[0] || '';
+                
+                // Données pour la devise principale
+                const mainVentes = parseFinancialValue(row[columnMapping[mainCurrency]['Ventes']] || '0');
+                const mainCollecte = parseFinancialValue(row[columnMapping[mainCurrency]['Collecte']] || '0');
+                const mainDon = parseFinancialValue(row[columnMapping[mainCurrency]['Don']] || '0');
+                const mainDepenses = parseFinancialValue(row[columnMapping[mainCurrency]['Dépenses']] || '0');
+                
+                // Données pour Euro
+                const euroVentes = parseFinancialValue(row[columnMapping['Euro']['Ventes']] || '0');
+                const euroCollecte = parseFinancialValue(row[columnMapping['Euro']['Collecte']] || '0');
+                const euroDon = parseFinancialValue(row[columnMapping['Euro']['Don']] || '0');
+                const euroDepenses = parseFinancialValue(row[columnMapping['Euro']['Dépenses']] || '0');
+                
+                // Données pour Banque Euro
+                const banqueVentes = parseFinancialValue(row[columnMapping['Banque Euro']['Ventes']] || '0');
+                const banqueCollecte = parseFinancialValue(row[columnMapping['Banque Euro']['Collecte']] || '0');
+                const banqueDon = parseFinancialValue(row[columnMapping['Banque Euro']['Don']] || '0');
+                const banqueDepenses = parseFinancialValue(row[columnMapping['Banque Euro']['Dépenses']] || '0');
+                
+                // Ajouter aux totaux
+                totalMainVentes += mainVentes;
+                totalMainCollecte += mainCollecte;
+                totalMainDon += mainDon;
+                totalMainDepenses += mainDepenses;
+                
+                totalEuroVentes += euroVentes;
+                totalEuroCollecte += euroCollecte;
+                totalEuroDon += euroDon;
+                totalEuroDepenses += euroDepenses;
+                
+                totalBanqueVentes += banqueVentes;
+                totalBanqueCollecte += banqueCollecte;
+                totalBanqueDon += banqueDon;
+                totalBanqueDepenses += banqueDepenses;
+                
+                html += `
+                    <tr>
+                        <td class="date-cell">${dateStr}</td>
+                        <td>${formatNumberWithUnit(mainVentes, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainCollecte, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainDon, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainDepenses, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(euroVentes, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroCollecte, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroDon, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroDepenses, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueVentes, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueCollecte, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueDon, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueDepenses, 'Banque Euro')}</td>
+                    </tr>
+                `;
+            });
+            
+            // Ajouter la ligne de total
+            html += `
+                <tr class="total-row">
+                    <td class="date-cell">TOTAL</td>
+                    <td>${formatNumberWithUnit(totalMainVentes, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainCollecte, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainDon, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainDepenses, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalEuroVentes, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroCollecte, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroDon, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroDepenses, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueVentes, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueCollecte, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueDon, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueDepenses, 'Banque Euro')}</td>
+                </tr>
+            `;
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            // Afficher les résultats
+            const resultsSection = document.getElementById('resultsSection');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('resultTitle');
+            
+            resultContent.innerHTML = html;
+            resultTitle.textContent = `Récapitulatif financier pour ${pays}`;
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
     </script>
 </body>
