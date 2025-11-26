@@ -34,28 +34,102 @@
             margin: 0 auto;
         }
         
+        /* NOUVEAU STYLE POUR L'EN-TÊTE AMÉLIORÉ */
         header {
             text-align: center;
             margin-bottom: 30px;
-            padding: 40px 20px;
-            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 50%, #c8e6c9 100%);
+            padding: 50px 20px 40px;
+            background: linear-gradient(135deg, #1a2a6c 0%, #2c3e50 50%, #4a235a 100%);
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
             position: relative;
             overflow: hidden;
-            border: 2px solid #4CAF50;
+            border: 2px solid #3498db;
+        }
+        
+        /* Décorations monétaires flottantes */
+        .currency-decoration {
+            position: absolute;
+            font-size: 2.5em;
+            z-index: 1;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .currency-decoration.ariary {
+            top: 20px;
+            left: 20px;
+            animation-delay: 0s;
+        }
+        
+        .currency-decoration.euro {
+            top: 20px;
+            right: 20px;
+            animation-delay: 1s;
+        }
+        
+        .currency-decoration.franc {
+            bottom: 20px;
+            left: 20px;
+            animation-delay: 2s;
+        }
+        
+        .currency-decoration.livre {
+            bottom: 20px;
+            right: 20px;
+            animation-delay: 3s;
+        }
+        
+        .currency-decoration.banque {
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            animation-delay: 4s;
+        }
+        
+        /* Animation de flottement */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+        
+        /* Badges des devises */
+        .currency-badges {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .currency-badge {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
         }
         
         h1 {
-            color: #2e7d32;
+            color: white;
             margin-bottom: 15px;
             font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
         header p {
-            color: #388e3c;
+            color: #ecf0f1;
             font-size: 1.2em;
             font-weight: 500;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
         
         .stats-section {
@@ -213,11 +287,23 @@
             background-color: #6c7a7d;
         }
         
-        .financial-table {
+        /* MODIFICATION: Ajout du conteneur de défilement pour les tableaux financiers */
+        .financial-table-container {
             width: 100%;
-            border-collapse: collapse;
+            overflow-x: auto;
             margin: 20px 0;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .financial-table {
+            width: auto;
+            min-width: 100%;
+            border-collapse: collapse;
             font-size: 14px;
+            margin: 0;
         }
         
         .financial-table th {
@@ -227,18 +313,23 @@
             padding: 12px;
             text-align: center;
             border: 1px solid #ddd;
+            white-space: nowrap;
         }
         
         .financial-table td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: right;
+            white-space: nowrap;
         }
         
         .financial-table .category {
             background: #f8f9fa;
             font-weight: bold;
             text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 1;
         }
         
         .financial-table .recettes-row {
@@ -575,6 +666,43 @@
             .scroll-hint {
                 display: block;
             }
+            
+            /* Adaptation des décorations pour mobile */
+            .currency-decoration {
+                font-size: 1.8em;
+            }
+            
+            .currency-decoration.ariary {
+                top: 10px;
+                left: 10px;
+            }
+            
+            .currency-decoration.euro {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .currency-decoration.franc {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .currency-decoration.livre {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .currency-decoration.banque {
+                left: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            header p {
+                font-size: 1em;
+            }
         }
         
         @media (max-width: 480px) {
@@ -586,22 +714,51 @@
             .country-summary-table td {
                 padding: 6px 4px;
             }
+            
+            .currency-decoration {
+                font-size: 1.5em;
+            }
+            
+            h1 {
+                font-size: 1.7em;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>💰 RAPPORT FINANCIER TOURNÉE 2026</h1>
-            <p>Navigation par date et recherche dans les données financières</p>
+            <!-- Décorations monétaires flottantes -->
+            <div class="currency-decoration ariary">🇲🇬</div>
+            <div class="currency-decoration euro">💶</div>
+            <div class="currency-decoration franc">🇨🇭</div>
+            <div class="currency-decoration livre">💷</div>
+            <div class="currency-decoration banque">🏦</div>
+            
+            <div class="header-content">
+                <h1>💰 RAPPORT FINANCIER TOURNÉE 2026</h1>
+                <p>Navigation par date et recherche dans les données financières</p>
+                
+                <!-- Badges des devises -->
+                <div class="currency-badges">
+                    <div class="currency-badge">🇲🇬 Ariary</div>
+                    <div class="currency-badge">💶 Euro</div>
+                    <div class="currency-badge">🇨🇭 Franc Suisse</div>
+                    <div class="currency-badge">💷 Livre Sterling</div>
+                    <div class="currency-badge">🏦 Banque Euro</div>
+                </div>
+            </div>
         </header>
         
         <section class="stats-section" id="statsSection">
-            <!-- TITRE MODIFIÉ ICI -->
             <h2>📊 RECAPITULATIF GLOBAL</h2>
             
-            <div id="globalStats">
-                <!-- Les statistiques globales seront affichées ici -->
+            <!-- MODIFICATION: Ajout du conteneur de défilement -->
+            <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
+            <div class="financial-table-container">
+                <div id="globalStats">
+                    <!-- Les statistiques globales seront affichées ici -->
+                </div>
             </div>
             
             <!-- Nouvelle section pour les boutons externes - Positionnée sous le tableau -->
@@ -1156,9 +1313,11 @@
                 }
             };
 
-            let html = '<table class="financial-table">';
+            let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+            html += '<div class="financial-table-container">';
+            html += '<table class="financial-table">';
             
-            html += '<tr><th>Catégorie</th>';
+            html += '<tr><th class="category">Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
@@ -1208,6 +1367,7 @@
             html += '</tr>';
             
             html += '</table>';
+            html += '</div>';
             
             return html;
         }
@@ -1275,7 +1435,7 @@
 
             let html = '<table class="financial-table">';
             
-            html += '<tr><th>Catégorie</th>';
+            html += '<tr><th class="category">Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
