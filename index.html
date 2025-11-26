@@ -1397,7 +1397,7 @@
             errorMessages.forEach(msg => msg.remove());
         }
         
-        // Nouvelle fonction pour afficher le récapitulatif par pays
+        // NOUVELLE FONCTION MODIFIÉE : Affichage du récapitulatif par pays
         function showCountrySummary(pays) {
             console.log(`Affichage du récapitulatif pour ${pays}`);
             
@@ -1423,6 +1423,9 @@
                 mainCurrency = 'Livre';
                 mainCurrencyLabel = 'Livre Sterling';
             }
+            
+            // Déterminer si on doit afficher la colonne Euro (pas pour les pays qui utilisent déjà l'euro)
+            const showEuroColumn = !['FRANCE', 'ALLEMAGNE', 'BELGIQUE'].includes(pays.toUpperCase());
             
             // Colonnes pour chaque catégorie selon la devise
             const columnMapping = {
@@ -1470,7 +1473,14 @@
                             <tr>
                                 <th rowspan="2">Date</th>
                                 <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
-                                <th colspan="4" class="currency-header">Euro</th>
+            `;
+            
+            // Ajouter la colonne Euro seulement si nécessaire
+            if (showEuroColumn) {
+                html += `<th colspan="4" class="currency-header">Euro</th>`;
+            }
+            
+            html += `
                                 <th colspan="4" class="currency-header">Banque Euro</th>
                             </tr>
                             <tr class="sub-header">
@@ -1478,10 +1488,19 @@
                                 <th>Collecte</th>
                                 <th>Don</th>
                                 <th>Dépenses</th>
+            `;
+            
+            // Ajouter les sous-en-têtes Euro seulement si nécessaire
+            if (showEuroColumn) {
+                html += `
                                 <th>Ventes</th>
                                 <th>Collecte</th>
                                 <th>Don</th>
                                 <th>Dépenses</th>
+                `;
+            }
+            
+            html += `
                                 <th>Ventes</th>
                                 <th>Collecte</th>
                                 <th>Don</th>
@@ -1506,11 +1525,11 @@
                 const mainDon = parseFinancialValue(row[columnMapping[mainCurrency]['Don']] || '0');
                 const mainDepenses = parseFinancialValue(row[columnMapping[mainCurrency]['Dépenses']] || '0');
                 
-                // Données pour Euro
-                const euroVentes = parseFinancialValue(row[columnMapping['Euro']['Ventes']] || '0');
-                const euroCollecte = parseFinancialValue(row[columnMapping['Euro']['Collecte']] || '0');
-                const euroDon = parseFinancialValue(row[columnMapping['Euro']['Don']] || '0');
-                const euroDepenses = parseFinancialValue(row[columnMapping['Euro']['Dépenses']] || '0');
+                // Données pour Euro (seulement si affichées)
+                const euroVentes = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Ventes']] || '0') : 0;
+                const euroCollecte = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Collecte']] || '0') : 0;
+                const euroDon = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Don']] || '0') : 0;
+                const euroDepenses = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Dépenses']] || '0') : 0;
                 
                 // Données pour Banque Euro
                 const banqueVentes = parseFinancialValue(row[columnMapping['Banque Euro']['Ventes']] || '0');
@@ -1524,10 +1543,12 @@
                 totalMainDon += mainDon;
                 totalMainDepenses += mainDepenses;
                 
-                totalEuroVentes += euroVentes;
-                totalEuroCollecte += euroCollecte;
-                totalEuroDon += euroDon;
-                totalEuroDepenses += euroDepenses;
+                if (showEuroColumn) {
+                    totalEuroVentes += euroVentes;
+                    totalEuroCollecte += euroCollecte;
+                    totalEuroDon += euroDon;
+                    totalEuroDepenses += euroDepenses;
+                }
                 
                 totalBanqueVentes += banqueVentes;
                 totalBanqueCollecte += banqueCollecte;
@@ -1541,10 +1562,19 @@
                         <td>${formatNumberWithUnit(mainCollecte, mainCurrency)}</td>
                         <td>${formatNumberWithUnit(mainDon, mainCurrency)}</td>
                         <td>${formatNumberWithUnit(mainDepenses, mainCurrency)}</td>
+                `;
+                
+                // Ajouter les colonnes Euro seulement si nécessaires
+                if (showEuroColumn) {
+                    html += `
                         <td>${formatNumberWithUnit(euroVentes, 'Euro')}</td>
                         <td>${formatNumberWithUnit(euroCollecte, 'Euro')}</td>
                         <td>${formatNumberWithUnit(euroDon, 'Euro')}</td>
                         <td>${formatNumberWithUnit(euroDepenses, 'Euro')}</td>
+                    `;
+                }
+                
+                html += `
                         <td>${formatNumberWithUnit(banqueVentes, 'Banque Euro')}</td>
                         <td>${formatNumberWithUnit(banqueCollecte, 'Banque Euro')}</td>
                         <td>${formatNumberWithUnit(banqueDon, 'Banque Euro')}</td>
@@ -1561,10 +1591,19 @@
                     <td>${formatNumberWithUnit(totalMainCollecte, mainCurrency)}</td>
                     <td>${formatNumberWithUnit(totalMainDon, mainCurrency)}</td>
                     <td>${formatNumberWithUnit(totalMainDepenses, mainCurrency)}</td>
+            `;
+            
+            // Ajouter les totaux Euro seulement si affichés
+            if (showEuroColumn) {
+                html += `
                     <td>${formatNumberWithUnit(totalEuroVentes, 'Euro')}</td>
                     <td>${formatNumberWithUnit(totalEuroCollecte, 'Euro')}</td>
                     <td>${formatNumberWithUnit(totalEuroDon, 'Euro')}</td>
                     <td>${formatNumberWithUnit(totalEuroDepenses, 'Euro')}</td>
+                `;
+            }
+            
+            html += `
                     <td>${formatNumberWithUnit(totalBanqueVentes, 'Banque Euro')}</td>
                     <td>${formatNumberWithUnit(totalBanqueCollecte, 'Banque Euro')}</td>
                     <td>${formatNumberWithUnit(totalBanqueDon, 'Banque Euro')}</td>
