@@ -404,6 +404,46 @@
             background-color: #9b59b6;
         }
         
+        .external-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .external-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 200px;
+            max-width: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .external-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+        }
+        
+        .external-button.rubriques {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .external-button.recap {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+        
         .country-summary-table {
             width: 100%;
             border-collapse: collapse;
@@ -478,6 +518,15 @@
                 max-width: 100%;
             }
             
+            .external-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .external-button {
+                max-width: 100%;
+            }
+            
             .country-summary-table {
                 font-size: 12px;
             }
@@ -493,6 +542,17 @@
         
         <section class="stats-section" id="statsSection">
             <h2>📊 STATISTIQUES GLOBALES</h2>
+            
+            <!-- Nouvelle section pour les boutons externes -->
+            <div class="external-buttons">
+                <button class="external-button rubriques" onclick="window.open('https://nyakotour26-del.github.io/recap_DETAILS/', '_blank')">
+                    📋 Rubriques Détails
+                </button>
+                <button class="external-button recap" onclick="window.open('https://nyakotour26-del.github.io/RECAP-GL/', '_blank')">
+                    📈 Recap GL
+                </button>
+            </div>
+            
             <div id="globalStats">
                 <!-- Les statistiques globales seront affichées ici -->
             </div>
