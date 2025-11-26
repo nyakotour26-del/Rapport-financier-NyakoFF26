@@ -1,4 +1,4 @@
-met les boutons rubriques details  recap gl et accès fichier source sur une meme ligne cote à cote que ca soit en vue mobile et en vue ordi change la couleur de fonds en gris clair  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -13,6 +13,7 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             --text-color: #2c3e50;
             --border-radius: 8px;
             --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --background-color: #f0f2f5; /* Nouvelle couleur de fond gris clair */
         }
         
         * {
@@ -25,7 +26,7 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: var(--text-color);
-            background-color: #f5f7fa;
+            background-color: var(--background-color); /* Application de la nouvelle couleur */
             padding: 20px;
         }
         
@@ -547,6 +548,7 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             min-width: 120px;
         }
         
+        /* MODIFICATION: Style amélioré pour les boutons pays */
         .country-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -567,6 +569,10 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             flex: 1;
             min-width: 150px;
             max-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         
         .country-button:hover {
@@ -598,6 +604,7 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             background-color: #9b59b6;
         }
         
+        /* MODIFICATION: Style amélioré pour les boutons externes */
         .external-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -754,26 +761,31 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
                 flex-direction: column;
             }
             
+            /* MODIFICATION: Adaptation des boutons pays pour mobile */
             .country-buttons {
-                flex-direction: column;
+                flex-direction: row;
                 align-items: center;
             }
             
             .country-button {
-                max-width: 100%;
+                max-width: calc(50% - 10px);
+                min-width: 140px;
             }
             
+            /* MODIFICATION: Adaptation des boutons externes pour mobile */
             .external-buttons {
-                flex-direction: column;
+                flex-direction: row;
                 align-items: center;
             }
             
             .external-button {
-                max-width: 100%;
+                max-width: calc(50% - 10px);
+                min-width: 180px;
             }
             
             .source-button {
-                max-width: 100%;
+                max-width: calc(50% - 10px);
+                min-width: 180px;
             }
             
             .country-summary-table {
@@ -861,6 +873,17 @@ met les boutons rubriques details  recap gl et accès fichier source sur une mem
             
             .calendar-day-header {
                 min-width: 55px;
+            }
+            
+            /* MODIFICATION: Adaptation des boutons pour très petits écrans */
+            .country-button {
+                max-width: 100%;
+                min-width: 100%;
+            }
+            
+            .external-button, .source-button {
+                max-width: 100%;
+                min-width: 100%;
             }
         }
     </style>
