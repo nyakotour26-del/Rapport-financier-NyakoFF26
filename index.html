@@ -301,6 +301,27 @@
             background-color: #6c7a7d;
         }
         
+        /* Style pour les boutons verrouillés */
+        .external-button.locked {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            cursor: not-allowed;
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .external-button.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .external-button.locked::after {
+            content: "🔒";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 12px;
+        }
+        
         /* NOUVEAU: Style pour le bouton source protégé */
         .source-button {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
@@ -927,11 +948,12 @@
             
             <!-- Nouvelle section pour les boutons externes - Positionnée sous le tableau -->
             <div class="external-buttons">
-                <button class="external-button rubriques" onclick="window.open('https://nyakotour26-del.github.io/recap_DETAILS/', '_blank')">
-                    📋 Rubriques Détails
+                <!-- Boutons verrouillés par défaut -->
+                <button class="external-button rubriques locked" id="rubriquesButton" onclick="handleProtectedButton('https://nyakotour26-del.github.io/recap_DETAILS/')">
+                    🔒 Rubriques Détails
                 </button>
-                <button class="external-button recap" onclick="window.open('https://nyakotour26-del.github.io/RECAP-GL/', '_blank')">
-                    📈 Recap GL
+                <button class="external-button recap locked" id="recapButton" onclick="handleProtectedButton('https://nyakotour26-del.github.io/RECAP-GL/')">
+                    🔒 Recap GL
                 </button>
                 
                 <!-- NOUVEAU: Bouton d'accès au fichier source (désactivé par défaut) -->
@@ -1012,7 +1034,7 @@
     <div class="modal-overlay" id="passwordModal">
         <div class="modal-content">
             <h3>🔒 Accès Protégé</h3>
-            <p>Veuillez entrer le mot de passe pour accéder au fichier source :</p>
+            <p>Veuillez entrer le mot de passe pour accéder aux fonctionnalités protégées :</p>
             
             <div class="password-input">
                 <input type="password" id="passwordInput" placeholder="Mot de passe" autocomplete="off">
@@ -1061,9 +1083,6 @@
                 });
             });
             
-            // Activer le bouton source après chargement des données
-            document.getElementById('sourceButton').addEventListener('click', showPasswordModal);
-            
             // Entrée pour valider le mot de passe
             document.getElementById('passwordInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
@@ -1073,19 +1092,68 @@
             
             // Chargement automatique avec la méthode directe
             loadDataFromGoogleSheets('direct');
+            
+            // Verrouiller les boutons protégés au démarrage
+            lockProtectedButtons();
         });
+
+        // NOUVELLE FONCTION: Gestion des boutons protégés
+        function handleProtectedButton(url) {
+            if (isAuthenticated) {
+                window.open(url, '_blank');
+            } else {
+                showPasswordModal();
+            }
+        }
+
+        // NOUVELLE FONCTION: Verrouiller les boutons protégés
+        function lockProtectedButtons() {
+            const rubriquesButton = document.getElementById('rubriquesButton');
+            const recapButton = document.getElementById('recapButton');
+            const sourceButton = document.getElementById('sourceButton');
+            
+            rubriquesButton.classList.add('locked');
+            recapButton.classList.add('locked');
+            sourceButton.disabled = true;
+            
+            // Changer le texte pour indiquer qu'ils sont verrouillés
+            rubriquesButton.innerHTML = '🔒 Rubriques Détails';
+            recapButton.innerHTML = '🔒 Recap GL';
+            sourceButton.innerHTML = '🔒 Accès Fichier Source';
+        }
+
+        // NOUVELLE FONCTION: Déverrouiller les boutons protégés
+        function unlockProtectedButtons() {
+            const rubriquesButton = document.getElementById('rubriquesButton');
+            const recapButton = document.getElementById('recapButton');
+            const sourceButton = document.getElementById('sourceButton');
+            
+            rubriquesButton.classList.remove('locked');
+            recapButton.classList.remove('locked');
+            sourceButton.disabled = false;
+            
+            // Changer le texte et le style
+            rubriquesButton.innerHTML = '📋 Rubriques Détails';
+            recapButton.innerHTML = '📈 Recap GL';
+            sourceButton.innerHTML = '📁 Accès Fichier Source';
+            sourceButton.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
+            
+            // Mettre à jour les événements onclick
+            rubriquesButton.onclick = function() {
+                window.open('https://nyakotour26-del.github.io/recap_DETAILS/', '_blank');
+            };
+            
+            recapButton.onclick = function() {
+                window.open('https://nyakotour26-del.github.io/RECAP-GL/', '_blank');
+            };
+        }
 
         // NOUVELLE FONCTION: Afficher le modal de mot de passe
         function showPasswordModal() {
-            if (!isAuthenticated) {
-                document.getElementById('passwordModal').style.display = 'flex';
-                document.getElementById('passwordInput').value = '';
-                document.getElementById('passwordError').style.display = 'none';
-                document.getElementById('passwordInput').focus();
-            } else {
-                // Si déjà authentifié, ouvrir directement le fichier
-                window.open(SOURCE_FILE_URL, '_blank');
-            }
+            document.getElementById('passwordModal').style.display = 'flex';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+            document.getElementById('passwordInput').focus();
         }
 
         // NOUVELLE FONCTION: Fermer le modal de mot de passe
@@ -1105,17 +1173,15 @@
                 isAuthenticated = true;
                 closePasswordModal();
                 
-                // Activer le bouton définitivement
-                const sourceButton = document.getElementById('sourceButton');
-                sourceButton.disabled = false;
-                sourceButton.innerHTML = '📁 Accès Fichier Source';
-                sourceButton.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
-                
-                // Ouvrir le fichier source
-                window.open(SOURCE_FILE_URL, '_blank');
+                // Déverrouiller tous les boutons protégés
+                unlockProtectedButtons();
                 
                 // Afficher un message de succès
-                showTemporaryMessage('✅ Accès autorisé au fichier source', 'success');
+                showTemporaryMessage('✅ Accès autorisé aux fonctionnalités protégées', 'success');
+                
+                // Stocker l'authentification dans localStorage pour la session
+                localStorage.setItem('finadmin_authenticated', 'true');
+                localStorage.setItem('finadmin_timestamp', Date.now().toString());
             } else {
                 passwordError.style.display = 'block';
                 passwordInput.value = '';
@@ -1126,6 +1192,28 @@
                 setTimeout(() => {
                     passwordInput.style.animation = '';
                 }, 500);
+            }
+        }
+
+        // NOUVELLE FONCTION: Vérifier l'authentification au chargement
+        function checkExistingAuthentication() {
+            const authenticated = localStorage.getItem('finadmin_authenticated');
+            const timestamp = localStorage.getItem('finadmin_timestamp');
+            
+            if (authenticated === 'true' && timestamp) {
+                // Vérifier si l'authentification a moins de 8 heures
+                const now = Date.now();
+                const authTime = parseInt(timestamp);
+                const hoursSinceAuth = (now - authTime) / (1000 * 60 * 60);
+                
+                if (hoursSinceAuth < 8) {
+                    isAuthenticated = true;
+                    unlockProtectedButtons();
+                } else {
+                    // Expirer l'authentification après 8 heures
+                    localStorage.removeItem('finadmin_authenticated');
+                    localStorage.removeItem('finadmin_timestamp');
+                }
             }
         }
 
@@ -1207,10 +1295,8 @@
                 renderCalendar();
                 displayGlobalStats();
                 
-                // Activer le bouton source après chargement réussi
-                const sourceButton = document.getElementById('sourceButton');
-                sourceButton.disabled = false;
-                sourceButton.innerHTML = '🔓 Accès Fichier Source';
+                // Vérifier l'authentification existante
+                checkExistingAuthentication();
                 
             } catch (error) {
                 console.error('❌ Erreur de traitement:', error);
@@ -1221,7 +1307,7 @@
             }
         }
 
-        // Le reste du code JavaScript reste inchangé...
+        // ... Le reste des fonctions JavaScript existantes reste inchangé ...
         async function loadDataFromGoogleSheets(method = 'direct') {
             console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
             document.getElementById('loadingIndicator').style.display = 'block';
@@ -1293,7 +1379,8 @@
             }
         }
 
-        // ... Le reste des fonctions JavaScript existantes reste inchangé ...
+        // ... Le reste des fonctions JavaScript reste inchangé ...
+
         function showRetryOptions() {
             document.getElementById('retryOptions').style.display = 'block';
         }
