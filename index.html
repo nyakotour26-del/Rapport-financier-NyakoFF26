@@ -13,7 +13,7 @@
             --text-color: #2c3e50;
             --border-radius: 8px;
             --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            --background-color: #f0f2f5; /* Nouvelle couleur de fond gris clair */
+            --background-color: #f0f2f5;
         }
         
         * {
@@ -26,7 +26,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: var(--text-color);
-            background-color: var(--background-color); /* Application de la nouvelle couleur */
+            background-color: var(--background-color);
             padding: 20px;
         }
         
@@ -35,7 +35,6 @@
             margin: 0 auto;
         }
         
-        /* NOUVEAU STYLE POUR L'EN-TÊTE AMÉLIORÉ */
         header {
             text-align: center;
             margin-bottom: 30px;
@@ -48,7 +47,6 @@
             border: 2px solid #3498db;
         }
         
-        /* Décorations monétaires flottantes */
         .currency-decoration {
             position: absolute;
             font-size: 2.5em;
@@ -87,13 +85,11 @@
             animation-delay: 4s;
         }
         
-        /* Animation de flottement */
         @keyframes float {
             0%, 100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-10px) rotate(5deg); }
         }
         
-        /* Badges des devises */
         .currency-badges {
             display: flex;
             justify-content: center;
@@ -176,7 +172,6 @@
             margin-bottom: 20px;
         }
         
-        /* MODIFICATION: Calendrier scrollable horizontalement */
         .calendar-scroll-container {
             width: 100%;
             overflow-x: auto;
@@ -189,7 +184,7 @@
         }
         
         .calendar {
-            min-width: 600px; /* Largeur minimale pour assurer la lisibilité */
+            min-width: 600px;
             background: white;
             border-radius: var(--border-radius);
             padding: 15px;
@@ -301,7 +296,6 @@
             background-color: #6c7a7d;
         }
         
-        /* Style pour les boutons verrouillés */
         .external-button.locked {
             background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
             cursor: not-allowed;
@@ -322,7 +316,6 @@
             font-size: 12px;
         }
         
-        /* NOUVEAU: Style pour le bouton source protégé */
         .source-button {
             background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
             color: white;
@@ -355,7 +348,6 @@
             box-shadow: none;
         }
         
-        /* MODAL POUR MOT DE PASSE */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -412,7 +404,6 @@
             display: none;
         }
         
-        /* MODIFICATION: Ajout du conteneur de défilement pour les tableaux financiers */
         .financial-table-container {
             width: 100%;
             overflow-x: auto;
@@ -470,6 +461,39 @@
         .financial-table .difference-row {
             background: #d1ecf1;
             font-weight: bold;
+        }
+        
+        /* NOUVEAU: Styles pour les lignes Autres Sources */
+        .financial-table .autres-sources-header {
+            background: #ffeaa7;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .financial-table .autres-sources-row {
+            background: #fff5e6;
+        }
+        
+        .financial-table .emprunt-row {
+            background: #e8f0fe;
+        }
+        
+        .financial-table .pret-row {
+            background: #f0e6ff;
+        }
+        
+        .financial-table .transfert-row {
+            background: #ffe6f0;
+        }
+        
+        .financial-table .change-row {
+            background: #fff0e6;
+        }
+        
+        .financial-table .solde-row {
+            background: #b2f0e6;
+            font-weight: bold;
+            border-top: 3px solid #00b894;
         }
         
         .results-section {
@@ -569,7 +593,6 @@
             min-width: 120px;
         }
         
-        /* MODIFICATION: Style amélioré pour les boutons pays */
         .country-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -625,7 +648,6 @@
             background-color: #9b59b6;
         }
         
-        /* MODIFICATION: Style amélioré pour les boutons externes */
         .external-buttons {
             display: flex;
             flex-wrap: wrap;
@@ -666,7 +688,6 @@
             background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         }
         
-        /* NOUVEAU: Conteneur pour le défilement horizontal */
         .table-scroll-container {
             width: 100%;
             overflow-x: auto;
@@ -731,7 +752,6 @@
             color: white;
         }
         
-        /* Indicateur de défilement pour mobile */
         .scroll-hint {
             text-align: center;
             color: #7f8c8d;
@@ -782,7 +802,6 @@
                 flex-direction: column;
             }
             
-            /* MODIFICATION: Adaptation des boutons pays pour mobile */
             .country-buttons {
                 flex-direction: row;
                 align-items: center;
@@ -793,7 +812,6 @@
                 min-width: 140px;
             }
             
-            /* MODIFICATION: Adaptation des boutons externes pour mobile */
             .external-buttons {
                 flex-direction: row;
                 align-items: center;
@@ -818,12 +836,10 @@
                 padding: 8px 6px;
             }
             
-            /* Afficher l'indicateur de défilement sur mobile */
             .scroll-hint {
                 display: block;
             }
             
-            /* Adaptation des décorations pour mobile */
             .currency-decoration {
                 font-size: 1.8em;
             }
@@ -896,7 +912,6 @@
                 min-width: 55px;
             }
             
-            /* MODIFICATION: Adaptation des boutons pour très petits écrans */
             .country-button {
                 max-width: 100%;
                 min-width: 100%;
@@ -912,7 +927,6 @@
 <body>
     <div class="container">
         <header>
-            <!-- Décorations monétaires flottantes -->
             <div class="currency-decoration ariary">🇲🇬</div>
             <div class="currency-decoration euro">💶</div>
             <div class="currency-decoration franc">🇨🇭</div>
@@ -920,11 +934,9 @@
             <div class="currency-decoration banque">🏦</div>
             
             <div class="header-content">
-                <!-- MODIFICATION: "Banque Euro" retiré du titre -->
                 <h1>💰 RAPPORT FINANCIER TOURNÉE 2026</h1>
                 <p>Navigation par date et recherche dans les données financières</p>
                 
-                <!-- Badges des devises -->
                 <div class="currency-badges">
                     <div class="currency-badge">🇲🇬 Ariary</div>
                     <div class="currency-badge">💶 Euro</div>
@@ -938,7 +950,6 @@
         <section class="stats-section" id="statsSection">
             <h2>📊 RECAPITULATIF GLOBAL</h2>
             
-            <!-- MODIFICATION: Ajout du conteneur de défilement -->
             <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
             <div class="financial-table-container">
                 <div id="globalStats">
@@ -946,9 +957,8 @@
                 </div>
             </div>
             
-            <!-- Nouvelle section pour les boutons externes - Positionnée sous le tableau -->
+            <!-- Nouvelle section pour les boutons externes -->
             <div class="external-buttons">
-                <!-- Boutons verrouillés par défaut -->
                 <button class="external-button rubriques locked" id="rubriquesButton" onclick="handleProtectedButton('https://nyakotour26-del.github.io/recap_DETAILS/')">
                     🔒 Rubriques Détails
                 </button>
@@ -956,7 +966,6 @@
                     🔒 Recap GL
                 </button>
                 
-                <!-- NOUVEAU: Bouton d'accès au fichier source (désactivé par défaut) -->
                 <button class="source-button" id="sourceButton" disabled onclick="showPasswordModal()">
                     🔒 Accès Fichier Source
                 </button>
@@ -995,7 +1004,6 @@
                 </div>
             </div>
             
-            <!-- MODIFICATION: Calendrier dans un conteneur scrollable -->
             <div class="calendar-scroll-container">
                 <div class="calendar">
                     <div class="calendar-header">
@@ -1030,7 +1038,6 @@
         </section>
     </div>
 
-    <!-- NOUVEAU: Modal pour le mot de passe -->
     <div class="modal-overlay" id="passwordModal">
         <div class="modal-content">
             <h3>🔒 Accès Protégé</h3>
@@ -1053,6 +1060,8 @@
 
     <script>
         const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
+        // NOUVEAU: URL pour les données "Autres Sources" (Emprunt, Prêt, Transfert, Change)
+        const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const SOURCE_FILE_URL = 'https://docs.google.com/spreadsheets/d/1OrJcM5Sud9KbKqwdFhL3EEX0Rn3EW2B9pl6LEhlQj2g/edit?gid=1011617752#gid=1011617752';
         const CORRECT_PASSWORD = 'finadmin';
         
@@ -1064,6 +1073,9 @@
         let currentSearchTerm = '';
         let isAuthenticated = false;
         
+        // NOUVELLE: Données pour les "Autres Sources"
+        let autresSourcesData = {};
+        
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('searchForm').addEventListener('submit', handleSearch);
             document.getElementById('prevMonth').addEventListener('click', prevMonth);
@@ -1074,7 +1086,6 @@
             document.getElementById('tryProxy').addEventListener('click', () => loadDataFromGoogleSheets('proxy'));
             document.getElementById('tryCors').addEventListener('click', () => loadDataFromGoogleSheets('cors'));
             
-            // Ajouter les événements pour les boutons de pays
             const countryButtons = document.querySelectorAll('.country-button');
             countryButtons.forEach(button => {
                 button.addEventListener('click', function() {
@@ -1083,21 +1094,17 @@
                 });
             });
             
-            // Entrée pour valider le mot de passe
             document.getElementById('passwordInput').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     checkPassword();
                 }
             });
             
-            // Chargement automatique avec la méthode directe
             loadDataFromGoogleSheets('direct');
             
-            // Verrouiller les boutons protégés au démarrage
             lockProtectedButtons();
         });
 
-        // NOUVELLE FONCTION: Gestion des boutons protégés
         function handleProtectedButton(url) {
             if (isAuthenticated) {
                 window.open(url, '_blank');
@@ -1106,7 +1113,6 @@
             }
         }
 
-        // NOUVELLE FONCTION: Verrouiller les boutons protégés
         function lockProtectedButtons() {
             const rubriquesButton = document.getElementById('rubriquesButton');
             const recapButton = document.getElementById('recapButton');
@@ -1116,13 +1122,11 @@
             recapButton.classList.add('locked');
             sourceButton.disabled = true;
             
-            // Changer le texte pour indiquer qu'ils sont verrouillés
             rubriquesButton.innerHTML = '🔒 Rubriques Détails';
             recapButton.innerHTML = '🔒 Recap GL';
             sourceButton.innerHTML = '🔒 Accès Fichier Source';
         }
 
-        // NOUVELLE FONCTION: Déverrouiller les boutons protégés
         function unlockProtectedButtons() {
             const rubriquesButton = document.getElementById('rubriquesButton');
             const recapButton = document.getElementById('recapButton');
@@ -1132,13 +1136,11 @@
             recapButton.classList.remove('locked');
             sourceButton.disabled = false;
             
-            // Changer le texte et le style
             rubriquesButton.innerHTML = '📋 Rubriques Détails';
             recapButton.innerHTML = '📈 Recap GL';
             sourceButton.innerHTML = '📁 Accès Fichier Source';
             sourceButton.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
             
-            // Mettre à jour les événements onclick
             rubriquesButton.onclick = function() {
                 window.open('https://nyakotour26-del.github.io/recap_DETAILS/', '_blank');
             };
@@ -1148,7 +1150,6 @@
             };
         }
 
-        // NOUVELLE FONCTION: Afficher le modal de mot de passe
         function showPasswordModal() {
             document.getElementById('passwordModal').style.display = 'flex';
             document.getElementById('passwordInput').value = '';
@@ -1156,14 +1157,12 @@
             document.getElementById('passwordInput').focus();
         }
 
-        // NOUVELLE FONCTION: Fermer le modal de mot de passe
         function closePasswordModal() {
             document.getElementById('passwordModal').style.display = 'none';
             document.getElementById('passwordInput').value = '';
             document.getElementById('passwordError').style.display = 'none';
         }
 
-        // NOUVELLE FONCTION: Vérifier le mot de passe
         function checkPassword() {
             const passwordInput = document.getElementById('passwordInput');
             const passwordError = document.getElementById('passwordError');
@@ -1172,22 +1171,14 @@
             if (enteredPassword === CORRECT_PASSWORD) {
                 isAuthenticated = true;
                 closePasswordModal();
-                
-                // Déverrouiller tous les boutons protégés
                 unlockProtectedButtons();
-                
-                // Afficher un message de succès
                 showTemporaryMessage('✅ Accès autorisé aux fonctionnalités protégées', 'success');
-                
-                // Stocker l'authentification dans localStorage pour la session
                 localStorage.setItem('finadmin_authenticated', 'true');
                 localStorage.setItem('finadmin_timestamp', Date.now().toString());
             } else {
                 passwordError.style.display = 'block';
                 passwordInput.value = '';
                 passwordInput.focus();
-                
-                // Animation de secousse pour l'input
                 passwordInput.style.animation = 'shake 0.5s';
                 setTimeout(() => {
                     passwordInput.style.animation = '';
@@ -1195,13 +1186,11 @@
             }
         }
 
-        // NOUVELLE FONCTION: Vérifier l'authentification au chargement
         function checkExistingAuthentication() {
             const authenticated = localStorage.getItem('finadmin_authenticated');
             const timestamp = localStorage.getItem('finadmin_timestamp');
             
             if (authenticated === 'true' && timestamp) {
-                // Vérifier si l'authentification a moins de 8 heures
                 const now = Date.now();
                 const authTime = parseInt(timestamp);
                 const hoursSinceAuth = (now - authTime) / (1000 * 60 * 60);
@@ -1210,14 +1199,12 @@
                     isAuthenticated = true;
                     unlockProtectedButtons();
                 } else {
-                    // Expirer l'authentification après 8 heures
                     localStorage.removeItem('finadmin_authenticated');
                     localStorage.removeItem('finadmin_timestamp');
                 }
             }
         }
 
-        // NOUVELLE FONCTION: Afficher un message temporaire
         function showTemporaryMessage(message, type) {
             const messageDiv = document.createElement('div');
             messageDiv.textContent = message;
@@ -1250,7 +1237,6 @@
             }, 3000);
         }
 
-        // Ajout des animations CSS pour les messages
         const style = document.createElement('style');
         style.textContent = `
             @keyframes shake {
@@ -1271,7 +1257,39 @@
         `;
         document.head.appendChild(style);
 
-        // MODIFICATION: Activer le bouton source après chargement des données
+        // NOUVELLE FONCTION: Charger les données "Autres Sources"
+        async function loadAutresSources() {
+            try {
+                const response = await fetch(AUTRES_SOURCES_URL);
+                if (response.ok) {
+                    const csvText = await response.text();
+                    const lines = parseCSV(csvText);
+                    
+                    // Chercher la plage P4:U8 (lignes 4 à 8, colonnes P à U)
+                    for (let i = 3; i < 8; i++) { // Index 3 = ligne 4
+                        if (i < lines.length) {
+                            const row = lines[i];
+                            if (row && row.length >= 21) { // P est colonne 15 (index 15)
+                                const titre = row[15] ? row[15].trim() : ''; // Colonne P
+                                if (['Emprunt', 'Prêt', 'Transfert', 'Change'].includes(titre)) {
+                                    autresSourcesData[titre] = {
+                                        'Ariary': parseFinancialValue(row[16] || '0'), // Q
+                                        'Euro': parseFinancialValue(row[17] || '0'), // R
+                                        'Franc Suisse': parseFinancialValue(row[18] || '0'), // S
+                                        'Livre': parseFinancialValue(row[19] || '0'), // T
+                                        'Banque Euro': parseFinancialValue(row[20] || '0') // U
+                                    };
+                                }
+                            }
+                        }
+                    }
+                    console.log('✅ Données Autres Sources chargées:', autresSourcesData);
+                }
+            } catch (error) {
+                console.error('❌ Erreur chargement Autres Sources:', error);
+            }
+        }
+
         function processCSVData(csvText) {
             try {
                 if (!csvText || csvText.trim().length === 0) {
@@ -1291,12 +1309,13 @@
                 
                 console.log(`📊 ${sheetData.length} lignes de données chargées`);
                 
-                extractDatesWithData();
-                renderCalendar();
-                displayGlobalStats();
-                
-                // Vérifier l'authentification existante
-                checkExistingAuthentication();
+                // Charger les données "Autres Sources"
+                loadAutresSources().then(() => {
+                    extractDatesWithData();
+                    renderCalendar();
+                    displayGlobalStats();
+                    checkExistingAuthentication();
+                });
                 
             } catch (error) {
                 console.error('❌ Erreur de traitement:', error);
@@ -1307,7 +1326,6 @@
             }
         }
 
-        // ... Le reste des fonctions JavaScript existantes reste inchangé ...
         async function loadDataFromGoogleSheets(method = 'direct') {
             console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
             document.getElementById('loadingIndicator').style.display = 'block';
@@ -1361,7 +1379,6 @@
             } catch (error) {
                 console.log(`❌ Échec avec ${method}:`, error.message);
                 
-                // Essayer la méthode suivante automatiquement
                 if (method === 'direct') {
                     console.log('🔄 Essai automatique avec méthode proxy...');
                     loadDataFromGoogleSheets('proxy');
@@ -1369,7 +1386,6 @@
                     console.log('🔄 Essai automatique avec méthode CORS...');
                     loadDataFromGoogleSheets('cors');
                 } else {
-                    // Toutes les méthodes ont échoué, afficher les options de rechargement
                     showRetryOptions();
                     showError(`Impossible de charger les données. Vérifiez:<br>
                     1. Votre connexion internet<br>
@@ -1378,8 +1394,6 @@
                 }
             }
         }
-
-        // ... Le reste des fonctions JavaScript reste inchangé ...
 
         function showRetryOptions() {
             document.getElementById('retryOptions').style.display = 'block';
@@ -1494,6 +1508,7 @@
         }
         
         function formatDateForDisplay(date) {
+            if (!date) return 'Date inconnue';
             const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
             const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
             
@@ -1686,99 +1701,7 @@
             return `${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`;
         }
 
-        function formatFinancialData(row) {
-            const columnMapping = {
-                'Ariary': {
-                    'Ventes': 3,
-                    'Collecte': 4,
-                    'Don': 5,
-                    'Dépenses': 6
-                },
-                'Euro': {
-                    'Ventes': 7,
-                    'Collecte': 8,
-                    'Don': 9,
-                    'Dépenses': 10
-                },
-                'Franc Suisse': {
-                    'Ventes': 11,
-                    'Collecte': 12,
-                    'Don': 13,
-                    'Dépenses': 14
-                },
-                'Livre': {
-                    'Ventes': 15,
-                    'Collecte': 16,
-                    'Don': 17,
-                    'Dépenses': 18
-                },
-                'Banque Euro': {
-                    'Ventes': 19,
-                    'Collecte': 20,
-                    'Don': 21,
-                    'Dépenses': 22
-                }
-            };
-
-            let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
-            html += '<div class="financial-table-container">';
-            html += '<table class="financial-table">';
-            
-            html += '<tr><th class="category">Catégorie</th>';
-            Object.keys(columnMapping).forEach(currency => {
-                html += `<th>${currency}</th>`;
-            });
-            html += '</tr>';
-            
-            const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
-            categories.forEach(category => {
-                html += `<tr><td class="category">${category}</td>`;
-                Object.keys(columnMapping).forEach(currency => {
-                    const colIndex = columnMapping[currency][category];
-                    const value = row[colIndex] || '0';
-                    const numericValue = parseFinancialValue(value);
-                    html += `<td>${formatNumberWithUnit(numericValue, currency)}</td>`;
-                });
-                html += '</tr>';
-            });
-            
-            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                const cols = columnMapping[currency];
-                const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
-                const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
-                const don = parseFinancialValue(row[cols['Don']] || '0');
-                const recettes = ventes + collecte + don;
-                html += `<td>${formatNumberWithUnit(recettes, currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                const cols = columnMapping[currency];
-                const depenses = parseFinancialValue(row[cols['Dépenses']] || '0');
-                html += `<td>${formatNumberWithUnit(depenses, currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                const cols = columnMapping[currency];
-                const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
-                const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
-                const don = parseFinancialValue(row[cols['Don']] || '0');
-                const depenses = parseFinancialValue(row[cols['Dépenses']] || '0');
-                const difference = ventes + collecte + don - depenses;
-                html += `<td>${formatNumberWithUnit(difference, currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            html += '</table>';
-            html += '</div>';
-            
-            return html;
-        }
-
+        // MODIFICATION: Ajout de la section Autres Sources et calcul du solde
         function displayGlobalStats() {
             const statsSection = document.getElementById('globalStats');
             
@@ -1840,6 +1763,14 @@
                 });
             });
 
+            // Calcul des différences
+            const differences = {};
+            Object.keys(columnMapping).forEach(currency => {
+                const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
+                const depenses = globalTotals[currency]['Dépenses'];
+                differences[currency] = recettes - depenses;
+            });
+
             let html = '<table class="financial-table">';
             
             html += '<tr><th class="category">Catégorie</th>';
@@ -1874,16 +1805,175 @@
             
             html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
             Object.keys(columnMapping).forEach(currency => {
-                const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
-                const depenses = globalTotals[currency]['Dépenses'];
-                const difference = recettes - depenses;
-                html += `<td>${formatNumberWithUnit(difference, currency)}</td>`;
+                html += `<td>${formatNumberWithUnit(differences[currency], currency)}</td>`;
             });
             html += '</tr>';
+            
+            // NOUVEAU: Section Autres Sources (Emprunt, Prêt, Transfert, Change)
+            if (Object.keys(autresSourcesData).length > 0) {
+                html += '<tr class="autres-sources-header"><td colspan="6" style="text-align:center;">AUTRES SOURCES</td></tr>';
+                
+                const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
+                sources.forEach(source => {
+                    if (autresSourcesData[source]) {
+                        const bgClass = source === 'Emprunt' ? 'emprunt-row' : 
+                                       source === 'Prêt' ? 'pret-row' :
+                                       source === 'Transfert' ? 'transfert-row' : 'change-row';
+                        html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
+                        Object.keys(columnMapping).forEach(currency => {
+                            const value = autresSourcesData[source][currency] || 0;
+                            html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+                        });
+                        html += '</tr>';
+                    }
+                });
+                
+                // Calcul du solde final : Différence + Emprunt - Prêt - Transfert - Change
+                html += '<tr class="solde-row"><td class="category">SOLDE FINAL</td>';
+                Object.keys(columnMapping).forEach(currency => {
+                    const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+                    const pret = autresSourcesData['Prêt'] ? autresSourcesData['Prêt'][currency] || 0 : 0;
+                    const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+                    const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
+                    
+                    const solde = differences[currency] + emprunt - pret - transfert - change;
+                    html += `<td>${formatNumberWithUnit(solde, currency)}</td>`;
+                });
+                html += '</tr>';
+            }
             
             html += '</table>';
             
             statsSection.innerHTML = html;
+        }
+        
+        function formatFinancialData(row) {
+            const columnMapping = {
+                'Ariary': {
+                    'Ventes': 3,
+                    'Collecte': 4,
+                    'Don': 5,
+                    'Dépenses': 6
+                },
+                'Euro': {
+                    'Ventes': 7,
+                    'Collecte': 8,
+                    'Don': 9,
+                    'Dépenses': 10
+                },
+                'Franc Suisse': {
+                    'Ventes': 11,
+                    'Collecte': 12,
+                    'Don': 13,
+                    'Dépenses': 14
+                },
+                'Livre': {
+                    'Ventes': 15,
+                    'Collecte': 16,
+                    'Don': 17,
+                    'Dépenses': 18
+                },
+                'Banque Euro': {
+                    'Ventes': 19,
+                    'Collecte': 20,
+                    'Don': 21,
+                    'Dépenses': 22
+                }
+            };
+
+            // Calcul des totaux pour cette ligne
+            const totals = {};
+            Object.keys(columnMapping).forEach(currency => {
+                const cols = columnMapping[currency];
+                const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
+                const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
+                const don = parseFinancialValue(row[cols['Don']] || '0');
+                const depenses = parseFinancialValue(row[cols['Dépenses']] || '0');
+                totals[currency] = {
+                    'Ventes': ventes,
+                    'Collecte': collecte,
+                    'Don': don,
+                    'Dépenses': depenses,
+                    'Recettes': ventes + collecte + don,
+                    'Difference': ventes + collecte + don - depenses
+                };
+            });
+
+            let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+            html += '<div class="financial-table-container">';
+            html += '<table class="financial-table">';
+            
+            html += '<tr><th class="category">Catégorie</th>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<th>${currency}</th>`;
+            });
+            html += '</tr>';
+            
+            const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
+            categories.forEach(category => {
+                html += `<tr><td class="category">${category}</td>`;
+                Object.keys(columnMapping).forEach(currency => {
+                    const value = totals[currency][category];
+                    html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['Dépenses'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['Difference'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            // NOUVEAU: Section Autres Sources pour les lignes individuelles
+            if (Object.keys(autresSourcesData).length > 0) {
+                html += '<tr class="autres-sources-header"><td colspan="6" style="text-align:center;">AUTRES SOURCES</td></tr>';
+                
+                const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
+                sources.forEach(source => {
+                    if (autresSourcesData[source]) {
+                        const bgClass = source === 'Emprunt' ? 'emprunt-row' : 
+                                       source === 'Prêt' ? 'pret-row' :
+                                       source === 'Transfert' ? 'transfert-row' : 'change-row';
+                        html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
+                        Object.keys(columnMapping).forEach(currency => {
+                            const value = autresSourcesData[source][currency] || 0;
+                            html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+                        });
+                        html += '</tr>';
+                    }
+                });
+                
+                // Calcul du solde final pour cette ligne
+                html += '<tr class="solde-row"><td class="category">SOLDE FINAL</td>';
+                Object.keys(columnMapping).forEach(currency => {
+                    const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+                    const pret = autresSourcesData['Prêt'] ? autresSourcesData['Prêt'][currency] || 0 : 0;
+                    const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+                    const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
+                    
+                    const solde = totals[currency]['Difference'] + emprunt - pret - transfert - change;
+                    html += `<td>${formatNumberWithUnit(solde, currency)}</td>`;
+                });
+                html += '</tr>';
+            }
+            
+            html += '</table>';
+            html += '</div>';
+            
+            return html;
         }
         
         function displayResults(results, searchTerm) {
@@ -1965,11 +2055,9 @@
             errorMessages.forEach(msg => msg.remove());
         }
         
-        // NOUVELLE FONCTION MODIFIÉE : Affichage du récapitulatif par pays
         function showCountrySummary(pays) {
             console.log(`Affichage du récapitulatif pour ${pays}`);
             
-            // Filtrer les données par pays
             const countryData = sheetData.filter(row => {
                 const rowPays = row[2] || '';
                 return rowPays.toUpperCase() === pays.toUpperCase();
@@ -1980,8 +2068,7 @@
                 return;
             }
             
-            // Déterminer la devise principale en fonction du pays
-            let mainCurrency = 'Euro'; // Par défaut
+            let mainCurrency = 'Euro';
             let mainCurrencyLabel = 'Euro';
             
             if (pays.toUpperCase() === 'SUISSE') {
@@ -1992,10 +2079,8 @@
                 mainCurrencyLabel = 'Livre Sterling';
             }
             
-            // Déterminer si on doit afficher la colonne Euro (pas pour les pays qui utilisent déjà l'euro)
             const showEuroColumn = !['FRANCE', 'ALLEMAGNE', 'BELGIQUE'].includes(pays.toUpperCase());
             
-            // Colonnes pour chaque catégorie selon la devise
             const columnMapping = {
                 'Ariary': {
                     'Ventes': 3,
@@ -2029,7 +2114,6 @@
                 }
             };
             
-            // Créer le tableau récapitulatif avec conteneur de défilement
             let html = `
                 <div class="search-stats">
                     <strong>${countryData.length} date(s) trouvée(s)</strong> pour : ${pays}
@@ -2043,7 +2127,6 @@
                                 <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
             `;
             
-            // Ajouter la colonne Euro seulement si nécessaire
             if (showEuroColumn) {
                 html += `<th colspan="4" class="currency-header">Euro</th>`;
             }
@@ -2058,7 +2141,6 @@
                                 <th>Dépenses</th>
             `;
             
-            // Ajouter les sous-en-têtes Euro seulement si nécessaire
             if (showEuroColumn) {
                 html += `
                                 <th>Ventes</th>
@@ -2078,34 +2160,28 @@
                         <tbody>
             `;
             
-            // Variables pour les totaux
             let totalMainVentes = 0, totalMainCollecte = 0, totalMainDon = 0, totalMainDepenses = 0;
             let totalEuroVentes = 0, totalEuroCollecte = 0, totalEuroDon = 0, totalEuroDepenses = 0;
             let totalBanqueVentes = 0, totalBanqueCollecte = 0, totalBanqueDon = 0, totalBanqueDepenses = 0;
             
-            // Ajouter chaque ligne de données
             countryData.forEach(row => {
                 const dateStr = row[0] || '';
                 
-                // Données pour la devise principale
                 const mainVentes = parseFinancialValue(row[columnMapping[mainCurrency]['Ventes']] || '0');
                 const mainCollecte = parseFinancialValue(row[columnMapping[mainCurrency]['Collecte']] || '0');
                 const mainDon = parseFinancialValue(row[columnMapping[mainCurrency]['Don']] || '0');
                 const mainDepenses = parseFinancialValue(row[columnMapping[mainCurrency]['Dépenses']] || '0');
                 
-                // Données pour Euro (seulement si affichées)
                 const euroVentes = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Ventes']] || '0') : 0;
                 const euroCollecte = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Collecte']] || '0') : 0;
                 const euroDon = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Don']] || '0') : 0;
                 const euroDepenses = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Dépenses']] || '0') : 0;
                 
-                // Données pour Banque Euro
                 const banqueVentes = parseFinancialValue(row[columnMapping['Banque Euro']['Ventes']] || '0');
                 const banqueCollecte = parseFinancialValue(row[columnMapping['Banque Euro']['Collecte']] || '0');
                 const banqueDon = parseFinancialValue(row[columnMapping['Banque Euro']['Don']] || '0');
                 const banqueDepenses = parseFinancialValue(row[columnMapping['Banque Euro']['Dépenses']] || '0');
                 
-                // Ajouter aux totaux
                 totalMainVentes += mainVentes;
                 totalMainCollecte += mainCollecte;
                 totalMainDon += mainDon;
@@ -2132,7 +2208,6 @@
                         <td>${formatNumberWithUnit(mainDepenses, mainCurrency)}</td>
                 `;
                 
-                // Ajouter les colonnes Euro seulement si nécessaires
                 if (showEuroColumn) {
                     html += `
                         <td>${formatNumberWithUnit(euroVentes, 'Euro')}</td>
@@ -2151,7 +2226,6 @@
                 `;
             });
             
-            // Ajouter la ligne de total
             html += `
                 <tr class="total-row">
                     <td class="date-cell">TOTAL</td>
@@ -2161,7 +2235,6 @@
                     <td>${formatNumberWithUnit(totalMainDepenses, mainCurrency)}</td>
             `;
             
-            // Ajouter les totaux Euro seulement si affichés
             if (showEuroColumn) {
                 html += `
                     <td>${formatNumberWithUnit(totalEuroVentes, 'Euro')}</td>
@@ -2185,7 +2258,6 @@
                 </div>
             `;
             
-            // Afficher les résultats
             const resultsSection = document.getElementById('resultsSection');
             const resultContent = document.getElementById('resultContent');
             const resultTitle = document.getElementById('resultTitle');
