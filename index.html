@@ -456,22 +456,37 @@
         .financial-table .depenses-row {
             background: #f8d7da;
             font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
         }
         
-        .financial-table .difference-row {
-            background: #d1ecf1;
+        .financial-table .depenses-row:hover {
+            background-color: #f5b7b1;
+        }
+        
+        .financial-table .fonds-propre-row {
+            background: #fff3cd;
             font-weight: bold;
         }
         
-        /* NOUVEAU: Styles pour les lignes Autres Sources */
-        .financial-table .autres-sources-header {
+        .financial-table .fonds-propre-row td {
+            font-weight: 900 !important;
+            color: #e67e22 !important;
+            font-size: 1.1em;
+        }
+        
+        .financial-table .autres-header {
             background: #ffeaa7;
             font-weight: bold;
             text-align: center;
         }
         
-        .financial-table .autres-sources-row {
-            background: #fff5e6;
+        .financial-table .ressource-row {
+            background: #e8f0fe;
+        }
+        
+        .financial-table .depense-row {
+            background: #ffe6f0;
         }
         
         .financial-table .emprunt-row {
@@ -490,10 +505,92 @@
             background: #fff0e6;
         }
         
-        .financial-table .solde-row {
+        .financial-table .en-main-row {
             background: #b2f0e6;
             font-weight: bold;
             border-top: 3px solid #00b894;
+            border-bottom: 3px solid #00b894;
+        }
+        
+        .financial-table .en-main-row td {
+            font-weight: 900;
+        }
+        
+        /* NOUVEAU: Styles pour la bulle d'information */
+        .details-bulle {
+            position: fixed;
+            background: white;
+            border: 2px solid #e74c3c;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            z-index: 2000;
+            min-width: 400px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .details-bulle h3 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e74c3c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .details-bulle .close-bulle {
+            cursor: pointer;
+            font-size: 20px;
+            color: #7f8c8d;
+        }
+        
+        .details-bulle .close-bulle:hover {
+            color: #e74c3c;
+        }
+        
+        .details-bulle table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .details-bulle th {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .details-bulle td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        
+        .details-bulle td:first-child {
+            text-align: left;
+            font-weight: bold;
+            background: #f8f9fa;
+        }
+        
+        .details-bulle .total-row {
+            background: #d1ecf1;
+            font-weight: bold;
+        }
+        
+        .details-bulle-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
         }
         
         .results-section {
@@ -875,6 +972,11 @@
             header p {
                 font-size: 1em;
             }
+            
+            .details-bulle {
+                min-width: 300px;
+                font-size: 12px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -920,6 +1022,11 @@
             .external-button, .source-button {
                 max-width: 100%;
                 min-width: 100%;
+            }
+            
+            .details-bulle {
+                min-width: 280px;
+                font-size: 11px;
             }
         }
     </style>
@@ -1038,6 +1145,18 @@
         </section>
     </div>
 
+    <!-- NOUVEAU: Overlay et bulle pour les détails dépenses -->
+    <div class="details-bulle-overlay" id="detailsOverlay" onclick="hideDetailsBulle()"></div>
+    <div class="details-bulle" id="detailsBulle">
+        <h3>
+            📋 DÉTAILS DÉPENSES
+            <span class="close-bulle" onclick="hideDetailsBulle()">✕</span>
+        </h3>
+        <div id="detailsBulleContent">
+            <!-- Le contenu sera généré dynamiquement -->
+        </div>
+    </div>
+
     <div class="modal-overlay" id="passwordModal">
         <div class="modal-content">
             <h3>🔒 Accès Protégé</h3>
@@ -1060,7 +1179,6 @@
 
     <script>
         const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
-        // NOUVEAU: URL pour les données "Autres Sources" (Emprunt, Prêt, Transfert, Change)
         const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const SOURCE_FILE_URL = 'https://docs.google.com/spreadsheets/d/1OrJcM5Sud9KbKqwdFhL3EEX0Rn3EW2B9pl6LEhlQj2g/edit?gid=1011617752#gid=1011617752';
         const CORRECT_PASSWORD = 'finadmin';
@@ -1073,8 +1191,11 @@
         let currentSearchTerm = '';
         let isAuthenticated = false;
         
-        // NOUVELLE: Données pour les "Autres Sources"
+        // Données pour les "Autres ressources et depenses"
         let autresSourcesData = {};
+        
+        // NOUVEAU: Données pour les détails dépenses (B2:G15)
+        let detailsDepensesData = [];
         
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('searchForm').addEventListener('submit', handleSearch);
@@ -1257,7 +1378,7 @@
         `;
         document.head.appendChild(style);
 
-        // NOUVELLE FONCTION: Charger les données "Autres Sources"
+        // Charger les données "Autres ressources et depenses"
         async function loadAutresSources() {
             try {
                 const response = await fetch(AUTRES_SOURCES_URL);
@@ -1265,7 +1386,33 @@
                     const csvText = await response.text();
                     const lines = parseCSV(csvText);
                     
-                    // Chercher la plage P4:U8 (lignes 4 à 8, colonnes P à U)
+                    // Charger les données pour la bulle (B2:G15)
+                    detailsDepensesData = [];
+                    for (let i = 1; i < 15; i++) { // Lignes 2 à 15 (index 1 à 14)
+                        if (i < lines.length) {
+                            const row = lines[i];
+                            if (row && row.length >= 7) { // B à G (index 1 à 6)
+                                const titre = row[1] ? row[1].trim() : ''; // Colonne B
+                                const categoriesValides = [
+                                    'Admin', 'Artisanat', 'Cadeaux', 'Divers', 'Don',
+                                    'Nourritures', 'Logistique', 'Répetition', 'Tenue',
+                                    'Tp terrestre&frais', 'Tp aérien&frais', 'Vente', 'Visa'
+                                ];
+                                if (titre && categoriesValides.includes(titre)) {
+                                    detailsDepensesData.push({
+                                        'Dépenses': titre,
+                                        'Ariary': parseFinancialValue(row[2] || '0'), // C
+                                        'Euro': parseFinancialValue(row[3] || '0'), // D
+                                        'Franc Suisse': parseFinancialValue(row[4] || '0'), // E
+                                        'Livre': parseFinancialValue(row[5] || '0'), // F
+                                        'Banque Euro': parseFinancialValue(row[6] || '0') // G
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Charger les données Emprunt/Prêt/Transfert/Change (P4:U8)
                     for (let i = 3; i < 8; i++) { // Index 3 = ligne 4
                         if (i < lines.length) {
                             const row = lines[i];
@@ -1283,11 +1430,82 @@
                             }
                         }
                     }
-                    console.log('✅ Données Autres Sources chargées:', autresSourcesData);
+                    console.log('✅ Données détails dépenses chargées:', detailsDepensesData.length, 'catégories');
+                    console.log('✅ Données Autres ressources et depenses chargées:', autresSourcesData);
                 }
             } catch (error) {
-                console.error('❌ Erreur chargement Autres Sources:', error);
+                console.error('❌ Erreur chargement données:', error);
             }
+        }
+
+        // NOUVELLE FONCTION: Afficher la bulle des détails dépenses
+        function showDetailsDepenses(event) {
+            const x = event.clientX;
+            const y = event.clientY;
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            
+            if (detailsDepensesData.length === 0) {
+                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                let html = '<table>';
+                html += '<tr><th>Dépenses</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDepensesData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item['Dépenses']}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Euro'], 'Euro')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Livre'], 'Livre')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL DÉPENSES</td>';
+                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                content.innerHTML = html;
+            }
+            
+            // Positionner la bulle
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            // Ajuster la position pour ne pas dépasser l'écran
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = x;
+            if (left + bulleWidth > windowWidth - 20) {
+                left = windowWidth - bulleWidth - 20;
+            }
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = y + 'px';
+        }
+        
+        function hideDetailsBulle() {
+            document.getElementById('detailsBulle').style.display = 'none';
+            document.getElementById('detailsOverlay').style.display = 'none';
         }
 
         function processCSVData(csvText) {
@@ -1309,7 +1527,7 @@
                 
                 console.log(`📊 ${sheetData.length} lignes de données chargées`);
                 
-                // Charger les données "Autres Sources"
+                // Charger les données supplémentaires
                 loadAutresSources().then(() => {
                     extractDatesWithData();
                     renderCalendar();
@@ -1701,7 +1919,7 @@
             return `${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`;
         }
 
-        // MODIFICATION: Ajout de la section Autres Sources et calcul du solde
+        // MODIFICATION: Affichage du tableau avec ligne Dépenses cliquable
         function displayGlobalStats() {
             const statsSection = document.getElementById('globalStats');
             
@@ -1763,12 +1981,12 @@
                 });
             });
 
-            // Calcul des différences
-            const differences = {};
+            // Calcul des fonds propres (anciennement disponibilité propre)
+            const fondsPropres = {};
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
                 const depenses = globalTotals[currency]['Dépenses'];
-                differences[currency] = recettes - depenses;
+                fondsPropres[currency] = recettes - depenses;
             });
 
             let html = '<table class="financial-table">';
@@ -1781,7 +1999,11 @@
             
             const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
             categories.forEach(category => {
-                html += `<tr><td class="category">${category}</td>`;
+                if (category === 'Dépenses') {
+                    html += `<tr class="depenses-row" onclick="showDetailsDepenses(event)"><td class="category">${category}</td>`;
+                } else {
+                    html += `<tr><td class="category">${category}</td>`;
+                }
                 Object.keys(columnMapping).forEach(currency => {
                     const value = globalTotals[currency][category];
                     html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
@@ -1803,22 +2025,21 @@
             });
             html += '</tr>';
             
-            html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
+            // MODIFICATION: "Disponibilité propre" devient "FONDS PROPRES" en orange gras
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `<td>${formatNumberWithUnit(differences[currency], currency)}</td>`;
+                html += `<td>${formatNumberWithUnit(fondsPropres[currency], currency)}</td>`;
             });
             html += '</tr>';
             
-            // NOUVEAU: Section Autres Sources (Emprunt, Prêt, Transfert, Change)
+            // Section Autres ressources et depenses
             if (Object.keys(autresSourcesData).length > 0) {
-                html += '<tr class="autres-sources-header"><td colspan="6" style="text-align:center;">AUTRES SOURCES</td></tr>';
+                html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
                 
                 const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
                 sources.forEach(source => {
                     if (autresSourcesData[source]) {
-                        const bgClass = source === 'Emprunt' ? 'emprunt-row' : 
-                                       source === 'Prêt' ? 'pret-row' :
-                                       source === 'Transfert' ? 'transfert-row' : 'change-row';
+                        const bgClass = source === 'Emprunt' ? 'ressource-row' : 'depense-row';
                         html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
                         Object.keys(columnMapping).forEach(currency => {
                             const value = autresSourcesData[source][currency] || 0;
@@ -1828,16 +2049,16 @@
                     }
                 });
                 
-                // Calcul du solde final : Différence + Emprunt - Prêt - Transfert - Change
-                html += '<tr class="solde-row"><td class="category">SOLDE FINAL</td>';
+                // Calcul du "En main"
+                html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
                 Object.keys(columnMapping).forEach(currency => {
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
                     const pret = autresSourcesData['Prêt'] ? autresSourcesData['Prêt'][currency] || 0 : 0;
                     const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
                     const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
                     
-                    const solde = differences[currency] + emprunt - pret - transfert - change;
-                    html += `<td>${formatNumberWithUnit(solde, currency)}</td>`;
+                    const enMain = fondsPropres[currency] + emprunt - pret - transfert - change;
+                    html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
                 });
                 html += '</tr>';
             }
@@ -1895,7 +2116,7 @@
                     'Don': don,
                     'Dépenses': depenses,
                     'Recettes': ventes + collecte + don,
-                    'Difference': ventes + collecte + don - depenses
+                    'FondsPropres': ventes + collecte + don - depenses
                 };
             });
 
@@ -1911,7 +2132,11 @@
             
             const categories = ['Ventes', 'Collecte', 'Don', 'Dépenses'];
             categories.forEach(category => {
-                html += `<tr><td class="category">${category}</td>`;
+                if (category === 'Dépenses') {
+                    html += `<tr class="depenses-row" onclick="showDetailsDepenses(event)"><td class="category">${category}</td>`;
+                } else {
+                    html += `<tr><td class="category">${category}</td>`;
+                }
                 Object.keys(columnMapping).forEach(currency => {
                     const value = totals[currency][category];
                     html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
@@ -1931,22 +2156,21 @@
             });
             html += '</tr>';
             
-            html += '<tr class="difference-row"><td class="category">DIFFERENCE</td>';
+            // MODIFICATION: "Disponibilité propre" devient "FONDS PROPRES" en orange gras
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `<td>${formatNumberWithUnit(totals[currency]['Difference'], currency)}</td>`;
+                html += `<td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}</td>`;
             });
             html += '</tr>';
             
-            // NOUVEAU: Section Autres Sources pour les lignes individuelles
+            // Section Autres ressources et depenses
             if (Object.keys(autresSourcesData).length > 0) {
-                html += '<tr class="autres-sources-header"><td colspan="6" style="text-align:center;">AUTRES SOURCES</td></tr>';
+                html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
                 
                 const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
                 sources.forEach(source => {
                     if (autresSourcesData[source]) {
-                        const bgClass = source === 'Emprunt' ? 'emprunt-row' : 
-                                       source === 'Prêt' ? 'pret-row' :
-                                       source === 'Transfert' ? 'transfert-row' : 'change-row';
+                        const bgClass = source === 'Emprunt' ? 'ressource-row' : 'depense-row';
                         html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
                         Object.keys(columnMapping).forEach(currency => {
                             const value = autresSourcesData[source][currency] || 0;
@@ -1956,16 +2180,16 @@
                     }
                 });
                 
-                // Calcul du solde final pour cette ligne
-                html += '<tr class="solde-row"><td class="category">SOLDE FINAL</td>';
+                // Calcul du "En main" pour cette ligne
+                html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
                 Object.keys(columnMapping).forEach(currency => {
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
                     const pret = autresSourcesData['Prêt'] ? autresSourcesData['Prêt'][currency] || 0 : 0;
                     const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
                     const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
                     
-                    const solde = totals[currency]['Difference'] + emprunt - pret - transfert - change;
-                    html += `<td>${formatNumberWithUnit(solde, currency)}</td>`;
+                    const enMain = totals[currency]['FondsPropres'] + emprunt - pret - transfert - change;
+                    html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
                 });
                 html += '</tr>';
             }
