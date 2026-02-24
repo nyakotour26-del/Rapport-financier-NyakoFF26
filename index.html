@@ -464,6 +464,17 @@
             background-color: #f5b7b1;
         }
         
+        .financial-table .don-row {
+            background: #fff3cd;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .financial-table .don-row:hover {
+            background-color: #ffe69c;
+        }
+        
         .financial-table .fonds-propre-row {
             background: #fff3cd;
             font-weight: bold;
@@ -491,18 +502,29 @@
         
         .financial-table .emprunt-row {
             background: #e8f0fe;
+            cursor: pointer;
         }
         
         .financial-table .pret-row {
             background: #f0e6ff;
+            cursor: pointer;
         }
         
         .financial-table .transfert-row {
             background: #ffe6f0;
+            cursor: pointer;
         }
         
         .financial-table .change-row {
             background: #fff0e6;
+            cursor: pointer;
+        }
+        
+        .financial-table .emprunt-row:hover,
+        .financial-table .pret-row:hover,
+        .financial-table .transfert-row:hover,
+        .financial-table .change-row:hover {
+            filter: brightness(0.95);
         }
         
         .financial-table .en-main-row {
@@ -516,7 +538,6 @@
             font-weight: 900;
         }
         
-        /* NOUVEAU: Styles pour la bulle d'information */
         .details-bulle {
             position: fixed;
             background: white;
@@ -1145,11 +1166,11 @@
         </section>
     </div>
 
-    <!-- NOUVEAU: Overlay et bulle pour les détails dépenses -->
+    <!-- Overlay et bulle pour les détails -->
     <div class="details-bulle-overlay" id="detailsOverlay" onclick="hideDetailsBulle()"></div>
     <div class="details-bulle" id="detailsBulle">
         <h3>
-            📋 DÉTAILS DÉPENSES
+            <span id="bulleTitle">DÉTAILS</span>
             <span class="close-bulle" onclick="hideDetailsBulle()">✕</span>
         </h3>
         <div id="detailsBulleContent">
@@ -1194,8 +1215,17 @@
         // Données pour les "Autres ressources et depenses"
         let autresSourcesData = {};
         
-        // NOUVEAU: Données pour les détails dépenses (B2:G15)
+        // Données pour les détails dépenses (B2:G15) avec correction
         let detailsDepensesData = [];
+        
+        // Nouvelles données pour les détails don (I3:N4)
+        let detailsDonData = [];
+        
+        // Nouvelles données pour les bulles emprunt, prêt, transfert, change
+        let detailsEmpruntData = { montant: [], remboursement: [] };
+        let detailsPretData = { montant: [], remboursement: [] };
+        let detailsTransfertData = { montant: [], remboursement: [] };
+        let detailsChangeData = { montant: [], remboursement: [] };
         
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('searchForm').addEventListener('submit', handleSearch);
@@ -1378,7 +1408,7 @@
         `;
         document.head.appendChild(style);
 
-        // Charger les données "Autres ressources et depenses"
+        // Charger toutes les données supplémentaires
         async function loadAutresSources() {
             try {
                 const response = await fetch(AUTRES_SOURCES_URL);
@@ -1386,13 +1416,13 @@
                     const csvText = await response.text();
                     const lines = parseCSV(csvText);
                     
-                    // Charger les données pour la bulle (B2:G15)
+                    // 1. Charger les détails dépenses (B2:G15) avec correction
                     detailsDepensesData = [];
                     for (let i = 1; i < 15; i++) { // Lignes 2 à 15 (index 1 à 14)
                         if (i < lines.length) {
                             const row = lines[i];
-                            if (row && row.length >= 7) { // B à G (index 1 à 6)
-                                const titre = row[1] ? row[1].trim() : ''; // Colonne B
+                            if (row && row.length >= 7) {
+                                const titre = row[1] ? row[1].trim() : '';
                                 const categoriesValides = [
                                     'Admin', 'Artisanat', 'Cadeaux', 'Divers', 'Don',
                                     'Nourritures', 'Logistique', 'Répetition', 'Tenue',
@@ -1401,50 +1431,248 @@
                                 if (titre && categoriesValides.includes(titre)) {
                                     detailsDepensesData.push({
                                         'Dépenses': titre,
-                                        'Ariary': parseFinancialValue(row[2] || '0'), // C
-                                        'Euro': parseFinancialValue(row[3] || '0'), // D
-                                        'Franc Suisse': parseFinancialValue(row[4] || '0'), // E
-                                        'Livre': parseFinancialValue(row[5] || '0'), // F
-                                        'Banque Euro': parseFinancialValue(row[6] || '0') // G
+                                        'Ariary': parseFinancialValue(row[2] || '0'),
+                                        'Euro': parseFinancialValue(row[3] || '0'),
+                                        'Franc Suisse': parseFinancialValue(row[4] || '0'),
+                                        'Livre': parseFinancialValue(row[5] || '0'),
+                                        'Banque Euro': parseFinancialValue(row[6] || '0')
                                     });
                                 }
                             }
                         }
                     }
                     
-                    // Charger les données Emprunt/Prêt/Transfert/Change (P4:U8)
-                    for (let i = 3; i < 8; i++) { // Index 3 = ligne 4
+                    // 2. Charger les détails don (I3:N4)
+                    for (let i = 2; i < 4; i++) { // Lignes 3 et 4 (index 2 et 3)
                         if (i < lines.length) {
                             const row = lines[i];
-                            if (row && row.length >= 21) { // P est colonne 15 (index 15)
-                                const titre = row[15] ? row[15].trim() : ''; // Colonne P
+                            if (row && row.length >= 14) { // I = index 8, N = index 13
+                                const titre = i === 2 ? 'Don Membre' : 'Don Divers';
+                                detailsDonData.push({
+                                    'Type': titre,
+                                    'Ariary': parseFinancialValue(row[8] || '0'),   // I
+                                    'Euro': parseFinancialValue(row[9] || '0'),     // J
+                                    'Franc Suisse': parseFinancialValue(row[10] || '0'), // K
+                                    'Livre': parseFinancialValue(row[11] || '0'),   // L
+                                    'Banque Euro': parseFinancialValue(row[12] || '0') // M (N est index 13)
+                                });
+                            }
+                        }
+                    }
+                    
+                    // 3. Charger Emprunt (montant I18:N18, remboursement B8:G8)
+                    if (lines.length > 18) {
+                        const montantRow = lines[17]; // Ligne 18 (index 17)
+                        if (montantRow && montantRow.length >= 14) {
+                            detailsEmpruntData.montant = {
+                                'Ariary': parseFinancialValue(montantRow[8] || '0'),   // I
+                                'Euro': parseFinancialValue(montantRow[9] || '0'),     // J
+                                'Franc Suisse': parseFinancialValue(montantRow[10] || '0'), // K
+                                'Livre': parseFinancialValue(montantRow[11] || '0'),   // L
+                                'Banque Euro': parseFinancialValue(montantRow[12] || '0') // M
+                            };
+                        }
+                        
+                        const rembRow = lines[7]; // Ligne 8 (index 7)
+                        if (rembRow && rembRow.length >= 7) {
+                            detailsEmpruntData.remboursement = {
+                                'Ariary': parseFinancialValue(rembRow[1] || '0'),   // B
+                                'Euro': parseFinancialValue(rembRow[2] || '0'),
+                                'Franc Suisse': parseFinancialValue(rembRow[3] || '0'),
+                                'Livre': parseFinancialValue(rembRow[4] || '0'),
+                                'Banque Euro': parseFinancialValue(rembRow[5] || '0')
+                            };
+                        }
+                    }
+                    
+                    // 4. Charger Prêt (montant B19:G19, remboursement I19:N19)
+                    if (lines.length > 19) {
+                        const montantPretRow = lines[18]; // Ligne 19 (index 18)
+                        if (montantPretRow && montantPretRow.length >= 7) {
+                            detailsPretData.montant = {
+                                'Ariary': parseFinancialValue(montantPretRow[1] || '0'),   // B
+                                'Euro': parseFinancialValue(montantPretRow[2] || '0'),
+                                'Franc Suisse': parseFinancialValue(montantPretRow[3] || '0'),
+                                'Livre': parseFinancialValue(montantPretRow[4] || '0'),
+                                'Banque Euro': parseFinancialValue(montantPretRow[5] || '0')
+                            };
+                        }
+                        
+                        const rembPretRow = lines[18]; // Même ligne, colonnes I à N
+                        if (rembPretRow && rembPretRow.length >= 14) {
+                            detailsPretData.remboursement = {
+                                'Ariary': parseFinancialValue(rembPretRow[8] || '0'),   // I
+                                'Euro': parseFinancialValue(rembPretRow[9] || '0'),
+                                'Franc Suisse': parseFinancialValue(rembPretRow[10] || '0'),
+                                'Livre': parseFinancialValue(rembPretRow[11] || '0'),
+                                'Banque Euro': parseFinancialValue(rembPretRow[12] || '0')
+                            };
+                        }
+                    }
+                    
+                    // 5. Charger Transfert (ligne 20)
+                    if (lines.length > 20) {
+                        const montantTransfertRow = lines[19]; // Ligne 20 (index 19)
+                        if (montantTransfertRow && montantTransfertRow.length >= 7) {
+                            detailsTransfertData.montant = {
+                                'Ariary': parseFinancialValue(montantTransfertRow[1] || '0'),
+                                'Euro': parseFinancialValue(montantTransfertRow[2] || '0'),
+                                'Franc Suisse': parseFinancialValue(montantTransfertRow[3] || '0'),
+                                'Livre': parseFinancialValue(montantTransfertRow[4] || '0'),
+                                'Banque Euro': parseFinancialValue(montantTransfertRow[5] || '0')
+                            };
+                        }
+                        
+                        const rembTransfertRow = lines[19];
+                        if (rembTransfertRow && rembTransfertRow.length >= 14) {
+                            detailsTransfertData.remboursement = {
+                                'Ariary': parseFinancialValue(rembTransfertRow[8] || '0'),
+                                'Euro': parseFinancialValue(rembTransfertRow[9] || '0'),
+                                'Franc Suisse': parseFinancialValue(rembTransfertRow[10] || '0'),
+                                'Livre': parseFinancialValue(rembTransfertRow[11] || '0'),
+                                'Banque Euro': parseFinancialValue(rembTransfertRow[12] || '0')
+                            };
+                        }
+                    }
+                    
+                    // 6. Charger Change (ligne 21)
+                    if (lines.length > 21) {
+                        const montantChangeRow = lines[20]; // Ligne 21 (index 20)
+                        if (montantChangeRow && montantChangeRow.length >= 7) {
+                            detailsChangeData.montant = {
+                                'Ariary': parseFinancialValue(montantChangeRow[1] || '0'),
+                                'Euro': parseFinancialValue(montantChangeRow[2] || '0'),
+                                'Franc Suisse': parseFinancialValue(montantChangeRow[3] || '0'),
+                                'Livre': parseFinancialValue(montantChangeRow[4] || '0'),
+                                'Banque Euro': parseFinancialValue(montantChangeRow[5] || '0')
+                            };
+                        }
+                        
+                        const rembChangeRow = lines[20];
+                        if (rembChangeRow && rembChangeRow.length >= 14) {
+                            detailsChangeData.remboursement = {
+                                'Ariary': parseFinancialValue(rembChangeRow[8] || '0'),
+                                'Euro': parseFinancialValue(rembChangeRow[9] || '0'),
+                                'Franc Suisse': parseFinancialValue(rembChangeRow[10] || '0'),
+                                'Livre': parseFinancialValue(rembChangeRow[11] || '0'),
+                                'Banque Euro': parseFinancialValue(rembChangeRow[12] || '0')
+                            };
+                        }
+                    }
+                    
+                    // 7. Charger les données Emprunt/Prêt/Transfert/Change (P4:U8) pour le tableau principal
+                    for (let i = 3; i < 8; i++) {
+                        if (i < lines.length) {
+                            const row = lines[i];
+                            if (row && row.length >= 21) {
+                                const titre = row[15] ? row[15].trim() : '';
                                 if (['Emprunt', 'Prêt', 'Transfert', 'Change'].includes(titre)) {
                                     autresSourcesData[titre] = {
-                                        'Ariary': parseFinancialValue(row[16] || '0'), // Q
-                                        'Euro': parseFinancialValue(row[17] || '0'), // R
-                                        'Franc Suisse': parseFinancialValue(row[18] || '0'), // S
-                                        'Livre': parseFinancialValue(row[19] || '0'), // T
-                                        'Banque Euro': parseFinancialValue(row[20] || '0') // U
+                                        'Ariary': parseFinancialValue(row[16] || '0'),
+                                        'Euro': parseFinancialValue(row[17] || '0'),
+                                        'Franc Suisse': parseFinancialValue(row[18] || '0'),
+                                        'Livre': parseFinancialValue(row[19] || '0'),
+                                        'Banque Euro': parseFinancialValue(row[20] || '0')
                                     };
                                 }
                             }
                         }
                     }
-                    console.log('✅ Données détails dépenses chargées:', detailsDepensesData.length, 'catégories');
-                    console.log('✅ Données Autres ressources et depenses chargées:', autresSourcesData);
+                    
+                    console.log('✅ Données chargées:', {
+                        depenses: detailsDepensesData.length,
+                        don: detailsDonData.length,
+                        emprunt: detailsEmpruntData,
+                        pret: detailsPretData,
+                        transfert: detailsTransfertData,
+                        change: detailsChangeData
+                    });
                 }
             } catch (error) {
                 console.error('❌ Erreur chargement données:', error);
             }
         }
 
-        // NOUVELLE FONCTION: Afficher la bulle des détails dépenses
+        // Fonction pour afficher une bulle générique
+        function showDetailsBulle(event, title, data) {
+            const x = event.clientX;
+            const y = event.clientY;
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = `📋 DÉTAILS ${title.toUpperCase()}`;
+            
+            let html = '<table>';
+            html += '<tr><th>Opération</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+            
+            // Ligne montant/emprunt
+            html += '<tr>';
+            html += `<td>${title} reçu</td>`;
+            html += `<td>${formatNumberWithUnit(data.montant?.Ariary || 0, 'Ariary')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.montant?.Euro || 0, 'Euro')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.montant?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.montant?.Livre || 0, 'Livre')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.montant?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+            html += '</tr>';
+            
+            // Ligne remboursement
+            html += '<tr>';
+            html += `<td>Remboursement ${title}</td>`;
+            html += `<td>${formatNumberWithUnit(data.remboursement?.Ariary || 0, 'Ariary')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.remboursement?.Euro || 0, 'Euro')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.remboursement?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.remboursement?.Livre || 0, 'Livre')}</td>`;
+            html += `<td>${formatNumberWithUnit(data.remboursement?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+            html += '</tr>';
+            
+            // Ligne solde
+            const solde = {
+                'Ariary': (data.montant?.Ariary || 0) - (data.remboursement?.Ariary || 0),
+                'Euro': (data.montant?.Euro || 0) - (data.remboursement?.Euro || 0),
+                'Franc Suisse': (data.montant?.['Franc Suisse'] || 0) - (data.remboursement?.['Franc Suisse'] || 0),
+                'Livre': (data.montant?.Livre || 0) - (data.remboursement?.Livre || 0),
+                'Banque Euro': (data.montant?.['Banque Euro'] || 0) - (data.remboursement?.['Banque Euro'] || 0)
+            };
+            
+            html += '<tr class="total-row">';
+            html += '<td>SOLDE</td>';
+            html += `<td>${formatNumberWithUnit(solde['Ariary'], 'Ariary')}</td>`;
+            html += `<td>${formatNumberWithUnit(solde['Euro'], 'Euro')}</td>`;
+            html += `<td>${formatNumberWithUnit(solde['Franc Suisse'], 'Franc Suisse')}</td>`;
+            html += `<td>${formatNumberWithUnit(solde['Livre'], 'Livre')}</td>`;
+            html += `<td>${formatNumberWithUnit(solde['Banque Euro'], 'Banque Euro')}</td>`;
+            html += '</tr>';
+            
+            html += '</table>';
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = x;
+            if (left + bulleWidth > windowWidth - 20) {
+                left = windowWidth - bulleWidth - 20;
+            }
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = y + 'px';
+        }
+
+        // Fonction pour afficher la bulle des dépenses
         function showDetailsDepenses(event) {
             const x = event.clientX;
             const y = event.clientY;
             const bulle = document.getElementById('detailsBulle');
             const overlay = document.getElementById('detailsOverlay');
             const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DÉPENSES';
             
             if (detailsDepensesData.length === 0) {
                 content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
@@ -1486,11 +1714,75 @@
                 content.innerHTML = html;
             }
             
-            // Positionner la bulle
             bulle.style.display = 'block';
             overlay.style.display = 'block';
             
-            // Ajuster la position pour ne pas dépasser l'écran
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = x;
+            if (left + bulleWidth > windowWidth - 20) {
+                left = windowWidth - bulleWidth - 20;
+            }
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = y + 'px';
+        }
+
+        // Nouvelle fonction pour afficher la bulle des dons
+        function showDetailsDon(event) {
+            const x = event.clientX;
+            const y = event.clientY;
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DONS';
+            
+            if (detailsDonData.length === 0) {
+                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                let html = '<table>';
+                html += '<tr><th>Type de don</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDonData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item['Type']}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Euro'], 'Euro')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Livre'], 'Livre')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL DONS</td>';
+                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                content.innerHTML = html;
+            }
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
             const bulleWidth = bulle.offsetWidth;
             const windowWidth = window.innerWidth;
             let left = x;
@@ -1919,7 +2211,6 @@
             return `${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`;
         }
 
-        // MODIFICATION: Affichage du tableau avec ligne Dépenses cliquable
         function displayGlobalStats() {
             const statsSection = document.getElementById('globalStats');
             
@@ -1981,7 +2272,6 @@
                 });
             });
 
-            // Calcul des fonds propres (anciennement disponibilité propre)
             const fondsPropres = {};
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
@@ -2001,6 +2291,8 @@
             categories.forEach(category => {
                 if (category === 'Dépenses') {
                     html += `<tr class="depenses-row" onclick="showDetailsDepenses(event)"><td class="category">${category}</td>`;
+                } else if (category === 'Don') {
+                    html += `<tr class="don-row" onclick="showDetailsDon(event)"><td class="category">${category}</td>`;
                 } else {
                     html += `<tr><td class="category">${category}</td>`;
                 }
@@ -2025,22 +2317,35 @@
             });
             html += '</tr>';
             
-            // MODIFICATION: "Disponibilité propre" devient "FONDS PROPRES" en orange gras
             html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<td>${formatNumberWithUnit(fondsPropres[currency], currency)}</td>`;
             });
             html += '</tr>';
             
-            // Section Autres ressources et depenses
             if (Object.keys(autresSourcesData).length > 0) {
                 html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
                 
                 const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
                 sources.forEach(source => {
                     if (autresSourcesData[source]) {
-                        const bgClass = source === 'Emprunt' ? 'ressource-row' : 'depense-row';
-                        html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
+                        let bgClass = '';
+                        let clickHandler = '';
+                        if (source === 'Emprunt') {
+                            bgClass = 'emprunt-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Emprunt', detailsEmpruntData)"`;
+                        } else if (source === 'Prêt') {
+                            bgClass = 'pret-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Prêt', detailsPretData)"`;
+                        } else if (source === 'Transfert') {
+                            bgClass = 'transfert-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Transfert', detailsTransfertData)"`;
+                        } else if (source === 'Change') {
+                            bgClass = 'change-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Change', detailsChangeData)"`;
+                        }
+                        
+                        html += `<tr class="${bgClass}" ${clickHandler}><td class="category">${source}</td>`;
                         Object.keys(columnMapping).forEach(currency => {
                             const value = autresSourcesData[source][currency] || 0;
                             html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
@@ -2049,7 +2354,6 @@
                     }
                 });
                 
-                // Calcul du "En main"
                 html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
                 Object.keys(columnMapping).forEach(currency => {
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
@@ -2102,7 +2406,6 @@
                 }
             };
 
-            // Calcul des totaux pour cette ligne
             const totals = {};
             Object.keys(columnMapping).forEach(currency => {
                 const cols = columnMapping[currency];
@@ -2134,6 +2437,8 @@
             categories.forEach(category => {
                 if (category === 'Dépenses') {
                     html += `<tr class="depenses-row" onclick="showDetailsDepenses(event)"><td class="category">${category}</td>`;
+                } else if (category === 'Don') {
+                    html += `<tr class="don-row" onclick="showDetailsDon(event)"><td class="category">${category}</td>`;
                 } else {
                     html += `<tr><td class="category">${category}</td>`;
                 }
@@ -2156,22 +2461,35 @@
             });
             html += '</tr>';
             
-            // MODIFICATION: "Disponibilité propre" devient "FONDS PROPRES" en orange gras
             html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}</td>`;
             });
             html += '</tr>';
             
-            // Section Autres ressources et depenses
             if (Object.keys(autresSourcesData).length > 0) {
                 html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
                 
                 const sources = ['Emprunt', 'Prêt', 'Transfert', 'Change'];
                 sources.forEach(source => {
                     if (autresSourcesData[source]) {
-                        const bgClass = source === 'Emprunt' ? 'ressource-row' : 'depense-row';
-                        html += `<tr class="${bgClass}"><td class="category">${source}</td>`;
+                        let bgClass = '';
+                        let clickHandler = '';
+                        if (source === 'Emprunt') {
+                            bgClass = 'emprunt-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Emprunt', detailsEmpruntData)"`;
+                        } else if (source === 'Prêt') {
+                            bgClass = 'pret-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Prêt', detailsPretData)"`;
+                        } else if (source === 'Transfert') {
+                            bgClass = 'transfert-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Transfert', detailsTransfertData)"`;
+                        } else if (source === 'Change') {
+                            bgClass = 'change-row';
+                            clickHandler = `onclick="showDetailsBulle(event, 'Change', detailsChangeData)"`;
+                        }
+                        
+                        html += `<tr class="${bgClass}" ${clickHandler}><td class="category">${source}</td>`;
                         Object.keys(columnMapping).forEach(currency => {
                             const value = autresSourcesData[source][currency] || 0;
                             html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
@@ -2180,7 +2498,6 @@
                     }
                 });
                 
-                // Calcul du "En main" pour cette ligne
                 html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
                 Object.keys(columnMapping).forEach(currency => {
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
