@@ -1410,7 +1410,7 @@
         `;
         document.head.appendChild(style);
 
-        // Remplacer la section de chargement des données (lignes ~550-750) par ceci :
+     // Remplacer la section de chargement des données (lignes ~550-750) par ceci :
 
 // Charger toutes les données supplémentaires
 async function loadAutresSources() {
@@ -1464,110 +1464,98 @@ async function loadAutresSources() {
                 }
             }
             
-            // 3. Charger Emprunt
+            // 3. Charger Emprunt (ligne 18)
             if (lines.length > 18) {
-                // Montant Emprunt (I18:N18) - colonnes I à N
-                const montantRow = lines[17]; // Ligne 18 (index 17)
-                if (montantRow && montantRow.length >= 14) {
+                const ligne18 = lines[17]; // Ligne 18 (index 17)
+                if (ligne18 && ligne18.length >= 14) {
+                    // Emprunt reçu (J18, K18, L18, M18, N18)
                     detailsEmpruntData.montant = {
-                        'Ariary': parseFinancialValue(montantRow[8] || '0'),   // Colonne I
-                        'Euro': parseFinancialValue(montantRow[9] || '0'),     // Colonne J
-                        'Franc Suisse': parseFinancialValue(montantRow[10] || '0'), // Colonne K
-                        'Livre': parseFinancialValue(montantRow[11] || '0'),   // Colonne L
-                        'Banque Euro': parseFinancialValue(montantRow[12] || '0') // Colonne M
+                        'Ariary': parseFinancialValue(ligne18[9] || '0'),   // Colonne J (index 9)
+                        'Euro': parseFinancialValue(ligne18[10] || '0'),    // Colonne K (index 10)
+                        'Franc Suisse': parseFinancialValue(ligne18[11] || '0'), // Colonne L (index 11)
+                        'Livre': parseFinancialValue(ligne18[12] || '0'),   // Colonne M (index 12)
+                        'Banque Euro': parseFinancialValue(ligne18[13] || '0') // Colonne N (index 13)
                     };
-                }
-                
-                // Remboursement Emprunt (B8:G8) - colonnes B à G
-                const rembRow = lines[7]; // Ligne 8 (index 7)
-                if (rembRow && rembRow.length >= 7) {
+                    
+                    // Remboursement Emprunt (C18, D18, E18, F18, G18)
                     detailsEmpruntData.remboursement = {
-                        'Ariary': parseFinancialValue(rembRow[1] || '0'),   // Colonne B
-                        'Euro': parseFinancialValue(rembRow[2] || '0'),     // Colonne C
-                        'Franc Suisse': parseFinancialValue(rembRow[3] || '0'), // Colonne D
-                        'Livre': parseFinancialValue(rembRow[4] || '0'),    // Colonne E
-                        'Banque Euro': parseFinancialValue(rembRow[5] || '0') // Colonne F
+                        'Ariary': parseFinancialValue(ligne18[2] || '0'),   // Colonne C (index 2)
+                        'Euro': parseFinancialValue(ligne18[3] || '0'),     // Colonne D (index 3)
+                        'Franc Suisse': parseFinancialValue(ligne18[4] || '0'), // Colonne E (index 4)
+                        'Livre': parseFinancialValue(ligne18[5] || '0'),    // Colonne F (index 5)
+                        'Banque Euro': parseFinancialValue(ligne18[6] || '0') // Colonne G (index 6)
                     };
                 }
             }
             
-            // 4. Charger Prêt
+            // 4. Charger Prêt (ligne 19)
             if (lines.length > 19) {
-                // Montant Prêt donné (B19:G19) - colonnes B à G
-                const montantPretRow = lines[18]; // Ligne 19 (index 18)
-                if (montantPretRow && montantPretRow.length >= 7) {
+                const ligne19 = lines[18]; // Ligne 19 (index 18)
+                if (ligne19 && ligne19.length >= 14) {
+                    // Prêt accordé (C19, D19, E19, F19, G19)
                     detailsPretData.montant = {
-                        'Ariary': parseFinancialValue(montantPretRow[1] || '0'),   // Colonne B
-                        'Euro': parseFinancialValue(montantPretRow[2] || '0'),     // Colonne C
-                        'Franc Suisse': parseFinancialValue(montantPretRow[3] || '0'), // Colonne D
-                        'Livre': parseFinancialValue(montantPretRow[4] || '0'),    // Colonne E
-                        'Banque Euro': parseFinancialValue(montantPretRow[5] || '0') // Colonne F
+                        'Ariary': parseFinancialValue(ligne19[2] || '0'),   // Colonne C (index 2)
+                        'Euro': parseFinancialValue(ligne19[3] || '0'),     // Colonne D (index 3)
+                        'Franc Suisse': parseFinancialValue(ligne19[4] || '0'), // Colonne E (index 4)
+                        'Livre': parseFinancialValue(ligne19[5] || '0'),    // Colonne F (index 5)
+                        'Banque Euro': parseFinancialValue(ligne19[6] || '0') // Colonne G (index 6)
                     };
-                }
-                
-                // Remboursement Prêt (I19:N19) - colonnes I à N
-                const rembPretRow = lines[18]; // Même ligne, colonnes I à N
-                if (rembPretRow && rembPretRow.length >= 14) {
+                    
+                    // Remboursement Prêt (J19, K19, L19, M19, N19)
                     detailsPretData.remboursement = {
-                        'Ariary': parseFinancialValue(rembPretRow[8] || '0'),   // Colonne I
-                        'Euro': parseFinancialValue(rembPretRow[9] || '0'),     // Colonne J
-                        'Franc Suisse': parseFinancialValue(rembPretRow[10] || '0'), // Colonne K
-                        'Livre': parseFinancialValue(rembPretRow[11] || '0'),   // Colonne L
-                        'Banque Euro': parseFinancialValue(rembPretRow[12] || '0') // Colonne M
+                        'Ariary': parseFinancialValue(ligne19[9] || '0'),   // Colonne J (index 9)
+                        'Euro': parseFinancialValue(ligne19[10] || '0'),    // Colonne K (index 10)
+                        'Franc Suisse': parseFinancialValue(ligne19[11] || '0'), // Colonne L (index 11)
+                        'Livre': parseFinancialValue(ligne19[12] || '0'),   // Colonne M (index 12)
+                        'Banque Euro': parseFinancialValue(ligne19[13] || '0') // Colonne N (index 13)
                     };
                 }
             }
             
             // 5. Charger Transfert (ligne 20)
             if (lines.length > 20) {
-                // Montant Transfert (B20:G20) - colonnes B à G
-                const montantTransfertRow = lines[19]; // Ligne 20 (index 19)
-                if (montantTransfertRow && montantTransfertRow.length >= 7) {
+                const ligne20 = lines[19]; // Ligne 20 (index 19)
+                if (ligne20 && ligne20.length >= 14) {
+                    // Transfert (C20, D20, E20, F20, G20)
                     detailsTransfertData.montant = {
-                        'Ariary': parseFinancialValue(montantTransfertRow[1] || '0'), // Colonne B
-                        'Euro': parseFinancialValue(montantTransfertRow[2] || '0'),   // Colonne C
-                        'Franc Suisse': parseFinancialValue(montantTransfertRow[3] || '0'), // Colonne D
-                        'Livre': parseFinancialValue(montantTransfertRow[4] || '0'),  // Colonne E
-                        'Banque Euro': parseFinancialValue(montantTransfertRow[5] || '0') // Colonne F
+                        'Ariary': parseFinancialValue(ligne20[2] || '0'),   // Colonne C (index 2)
+                        'Euro': parseFinancialValue(ligne20[3] || '0'),     // Colonne D (index 3)
+                        'Franc Suisse': parseFinancialValue(ligne20[4] || '0'), // Colonne E (index 4)
+                        'Livre': parseFinancialValue(ligne20[5] || '0'),    // Colonne F (index 5)
+                        'Banque Euro': parseFinancialValue(ligne20[6] || '0') // Colonne G (index 6)
                     };
-                }
-                
-                // Remboursement Transfert (I20:N20) - colonnes I à N
-                const rembTransfertRow = lines[19];
-                if (rembTransfertRow && rembTransfertRow.length >= 14) {
+                    
+                    // Remboursement Transfert (J20, K20, L20, M20, N20)
                     detailsTransfertData.remboursement = {
-                        'Ariary': parseFinancialValue(rembTransfertRow[8] || '0'),  // Colonne I
-                        'Euro': parseFinancialValue(rembTransfertRow[9] || '0'),    // Colonne J
-                        'Franc Suisse': parseFinancialValue(rembTransfertRow[10] || '0'), // Colonne K
-                        'Livre': parseFinancialValue(rembTransfertRow[11] || '0'),  // Colonne L
-                        'Banque Euro': parseFinancialValue(rembTransfertRow[12] || '0') // Colonne M
+                        'Ariary': parseFinancialValue(ligne20[9] || '0'),   // Colonne J (index 9)
+                        'Euro': parseFinancialValue(ligne20[10] || '0'),    // Colonne K (index 10)
+                        'Franc Suisse': parseFinancialValue(ligne20[11] || '0'), // Colonne L (index 11)
+                        'Livre': parseFinancialValue(ligne20[12] || '0'),   // Colonne M (index 12)
+                        'Banque Euro': parseFinancialValue(ligne20[13] || '0') // Colonne N (index 13)
                     };
                 }
             }
             
             // 6. Charger Change (ligne 21)
             if (lines.length > 21) {
-                // Montant Change (B21:G21) - colonnes B à G
-                const montantChangeRow = lines[20]; // Ligne 21 (index 20)
-                if (montantChangeRow && montantChangeRow.length >= 7) {
+                const ligne21 = lines[20]; // Ligne 21 (index 20)
+                if (ligne21 && ligne21.length >= 14) {
+                    // Change (C21, D21, E21, F21, G21)
                     detailsChangeData.montant = {
-                        'Ariary': parseFinancialValue(montantChangeRow[1] || '0'), // Colonne B
-                        'Euro': parseFinancialValue(montantChangeRow[2] || '0'),   // Colonne C
-                        'Franc Suisse': parseFinancialValue(montantChangeRow[3] || '0'), // Colonne D
-                        'Livre': parseFinancialValue(montantChangeRow[4] || '0'),  // Colonne E
-                        'Banque Euro': parseFinancialValue(montantChangeRow[5] || '0') // Colonne F
+                        'Ariary': parseFinancialValue(ligne21[2] || '0'),   // Colonne C (index 2)
+                        'Euro': parseFinancialValue(ligne21[3] || '0'),     // Colonne D (index 3)
+                        'Franc Suisse': parseFinancialValue(ligne21[4] || '0'), // Colonne E (index 4)
+                        'Livre': parseFinancialValue(ligne21[5] || '0'),    // Colonne F (index 5)
+                        'Banque Euro': parseFinancialValue(ligne21[6] || '0') // Colonne G (index 6)
                     };
-                }
-                
-                // Remboursement Change (I21:N21) - colonnes I à N
-                const rembChangeRow = lines[20];
-                if (rembChangeRow && rembChangeRow.length >= 14) {
+                    
+                    // Remboursement Change (J21, K21, L21, M21, N21)
                     detailsChangeData.remboursement = {
-                        'Ariary': parseFinancialValue(rembChangeRow[8] || '0'),  // Colonne I
-                        'Euro': parseFinancialValue(rembChangeRow[9] || '0'),    // Colonne J
-                        'Franc Suisse': parseFinancialValue(rembChangeRow[10] || '0'), // Colonne K
-                        'Livre': parseFinancialValue(rembChangeRow[11] || '0'),  // Colonne L
-                        'Banque Euro': parseFinancialValue(rembChangeRow[12] || '0') // Colonne M
+                        'Ariary': parseFinancialValue(ligne21[9] || '0'),   // Colonne J (index 9)
+                        'Euro': parseFinancialValue(ligne21[10] || '0'),    // Colonne K (index 10)
+                        'Franc Suisse': parseFinancialValue(ligne21[11] || '0'), // Colonne L (index 11)
+                        'Livre': parseFinancialValue(ligne21[12] || '0'),   // Colonne M (index 12)
+                        'Banque Euro': parseFinancialValue(ligne21[13] || '0') // Colonne N (index 13)
                     };
                 }
             }
@@ -1591,20 +1579,24 @@ async function loadAutresSources() {
                 }
             }
             
-            console.log('✅ Données chargées avec les bons mappings de colonnes:', {
-                depenses: detailsDepensesData.length,
-                don: detailsDonData.length,
-                emprunt: detailsEmpruntData,
-                pret: detailsPretData,
-                transfert: detailsTransfertData,
-                change: detailsChangeData
+            console.log('✅ Données chargées avec les mappings exacts:', {
+                emprunt: {
+                    recu: detailsEmpruntData.montant,
+                    remboursement: detailsEmpruntData.remboursement
+                },
+                pret: {
+                    accorde: detailsPretData.montant,
+                    remboursement: detailsPretData.remboursement
+                },
+                transfert: {
+                    montant: detailsTransfertData.montant,
+                    remboursement: detailsTransfertData.remboursement
+                },
+                change: {
+                    montant: detailsChangeData.montant,
+                    remboursement: detailsChangeData.remboursement
+                }
             });
-            
-            // Afficher les mappings pour vérification
-            console.log('Mapping Emprunt - Montant (I:N):', detailsEmpruntData.montant);
-            console.log('Mapping Emprunt - Remboursement (B:G):', detailsEmpruntData.remboursement);
-            console.log('Mapping Prêt - Montant donné (B:G):', detailsPretData.montant);
-            console.log('Mapping Prêt - Remboursement (I:N):', detailsPretData.remboursement);
         }
     } catch (error) {
         console.error('❌ Erreur chargement données:', error);
