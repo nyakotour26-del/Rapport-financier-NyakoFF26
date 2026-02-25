@@ -1228,7 +1228,14 @@
         let detailsPretData = { montant: [], remboursement: [] };
         let detailsTransfertData = { montant: [], remboursement: [] };
         let detailsChangeData = { montant: [], remboursement: [] };
-        
+
+        // Indices des colonnes pour les données par localité (0 = colonne A)
+const LOCAL_COLUMNS = {
+    emprunt: { ariary: 23, euro: 24, francSuisse: 25, livre: 26, banqueEuro: 27 }, // X=23, Y=24, Z=25, AA=26, AB=27
+    pret: { ariary: 28, euro: 29, francSuisse: 30, livre: 31, banqueEuro: 32 },    // AC=28, AD=29, AE=30, AF=31, AG=32
+    transfert: { ariary: 33, euro: 34, francSuisse: 35, livre: 36, banqueEuro: 37 }, // AH=33, AI=34, AJ=35, AK=36, AL=37
+    change: { ariary: 38, euro: 39, francSuisse: 40, livre: 41, banqueEuro: 42 }    // AM=38, AN=39, AO=40, AP=41, AQ=42
+};
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('searchForm').addEventListener('submit', handleSearch);
             document.getElementById('prevMonth').addEventListener('click', prevMonth);
@@ -2400,131 +2407,210 @@ function showDetailsBulle(event, title, data) {
             statsSection.innerHTML = html;
         }
         
-        function formatFinancialData(row) {
-            const columnMapping = {
-                'Ariary': {
-                    'Ventes': 3,
-                    'Collecte': 4,
-                    'Don': 5,
-                    'Depenses': 6
-                },
-                'Euro': {
-                    'Ventes': 7,
-                    'Collecte': 8,
-                    'Don': 9,
-                    'Depenses': 10
-                },
-                'Franc Suisse': {
-                    'Ventes': 11,
-                    'Collecte': 12,
-                    'Don': 13,
-                    'Depenses': 14
-                },
-                'Livre': {
-                    'Ventes': 15,
-                    'Collecte': 16,
-                    'Don': 17,
-                    'Depenses': 18
-                },
-                'Banque Euro': {
-                    'Ventes': 19,
-                    'Collecte': 20,
-                    'Don': 21,
-                    'Depenses': 22
-                }
-            };
+  function formatFinancialData(row) {
+    const columnMapping = {
+        'Ariary': {
+            'Ventes': 3,
+            'Collecte': 4,
+            'Don': 5,
+            'Depenses': 6
+        },
+        'Euro': {
+            'Ventes': 7,
+            'Collecte': 8,
+            'Don': 9,
+            'Depenses': 10
+        },
+        'Franc Suisse': {
+            'Ventes': 11,
+            'Collecte': 12,
+            'Don': 13,
+            'Depenses': 14
+        },
+        'Livre': {
+            'Ventes': 15,
+            'Collecte': 16,
+            'Don': 17,
+            'Depenses': 18
+        },
+        'Banque Euro': {
+            'Ventes': 19,
+            'Collecte': 20,
+            'Don': 21,
+            'Depenses': 22
+        }
+    };
 
-            const totals = {};
-            Object.keys(columnMapping).forEach(currency => {
-                const cols = columnMapping[currency];
-                const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
-                const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
-                const don = parseFinancialValue(row[cols['Don']] || '0');
-                const depenses = parseFinancialValue(row[cols['Depenses']] || '0');
-                totals[currency] = {
-                    'Ventes': ventes,
-                    'Collecte': collecte,
-                    'Don': don,
-                    'Depenses': depenses,
-                    'Recettes': ventes + collecte + don,
-                    'FondsPropres': ventes + collecte + don - depenses
-                };
-            });
+    const totals = {};
+    Object.keys(columnMapping).forEach(currency => {
+        const cols = columnMapping[currency];
+        const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
+        const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
+        const don = parseFinancialValue(row[cols['Don']] || '0');
+        const depenses = parseFinancialValue(row[cols['Depenses']] || '0');
+        totals[currency] = {
+            'Ventes': ventes,
+            'Collecte': collecte,
+            'Don': don,
+            'Depenses': depenses,
+            'Recettes': ventes + collecte + don,
+            'FondsPropres': ventes + collecte + don - depenses
+        };
+    });
+    
+    // --- DONNÉES PAR LOCALITÉ (Emprunt, Prêt, Transfert, Change) ---
+    const empruntLocal = {
+        'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.ariary] || '0'),
+        'Euro': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.euro] || '0'),
+        'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.francSuisse] || '0'),
+        'Livre': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.livre] || '0'),
+        'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.banqueEuro] || '0')
+    };
 
-            let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
-            html += '<div class="financial-table-container">';
-            html += '<table class="financial-table">';
-            
-            html += '<tr><th class="category">Catégorie</th>';
-            Object.keys(columnMapping).forEach(currency => {
-                html += `<th>${currency}</th>`;
-            });
-            html += '</tr>';
-            
-            const categories = ['Ventes', 'Collecte', 'Don', 'Depenses'];
-            categories.forEach(category => {
+    const pretLocal = {
+        'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.pret.ariary] || '0'),
+        'Euro': parseFinancialValue(row[LOCAL_COLUMNS.pret.euro] || '0'),
+        'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.pret.francSuisse] || '0'),
+        'Livre': parseFinancialValue(row[LOCAL_COLUMNS.pret.livre] || '0'),
+        'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.pret.banqueEuro] || '0')
+    };
+
+    const transfertLocal = {
+        'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.transfert.ariary] || '0'),
+        'Euro': parseFinancialValue(row[LOCAL_COLUMNS.transfert.euro] || '0'),
+        'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.transfert.francSuisse] || '0'),
+        'Livre': parseFinancialValue(row[LOCAL_COLUMNS.transfert.livre] || '0'),
+        'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.transfert.banqueEuro] || '0')
+    };
+
+    const changeLocal = {
+        'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.change.ariary] || '0'),
+        'Euro': parseFinancialValue(row[LOCAL_COLUMNS.change.euro] || '0'),
+        'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.change.francSuisse] || '0'),
+        'Livre': parseFinancialValue(row[LOCAL_COLUMNS.change.livre] || '0'),
+        'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.change.banqueEuro] || '0')
+    };
+
+    let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+    html += '<div class="financial-table-container">';
+    html += '<table class="financial-table">';
+    
+    html += '<tr><th class="category">Catégorie</th>';
+    Object.keys(columnMapping).forEach(currency => {
+        html += `<th>${currency}</th>`;
+    });
+    html += '</tr>';
+    
+    const categories = ['Ventes', 'Collecte', 'Don', 'Depenses'];
+    categories.forEach(category => {
+        // Pas d'événements cliquables dans les résultats de recherche
+        html += `<tr><td class="category">${category}</td>`;
+        Object.keys(columnMapping).forEach(currency => {
+            const value = totals[currency][category];
+            html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
+    Object.keys(columnMapping).forEach(currency => {
+        html += `<td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}</td>`;
+    });
+    html += '</tr>';
+    
+    html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
+    Object.keys(columnMapping).forEach(currency => {
+        html += `<td>${formatNumberWithUnit(totals[currency]['Depenses'], currency)}</td>`;
+    });
+    html += '</tr>';
+    
+    html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
+    Object.keys(columnMapping).forEach(currency => {
+        html += `<td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}</td>`;
+    });
+    html += '</tr>';
+    
+    if (Object.keys(autresSourcesData).length > 0) {
+        html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
+        
+        const sources = ['Emprunt', 'Pret', 'Transfert', 'Change'];
+        sources.forEach(source => {
+            if (autresSourcesData[source]) {
                 // Pas d'événements cliquables dans les résultats de recherche
-                html += `<tr><td class="category">${category}</td>`;
+                html += `<tr><td class="category">${source}</td>`;
                 Object.keys(columnMapping).forEach(currency => {
-                    const value = totals[currency][category];
+                    const value = autresSourcesData[source][currency] || 0;
                     html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
                 });
                 html += '</tr>';
-            });
-            
-            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                html += `<td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                html += `<td>${formatNumberWithUnit(totals[currency]['Depenses'], currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                html += `<td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}</td>`;
-            });
-            html += '</tr>';
-            
-            if (Object.keys(autresSourcesData).length > 0) {
-                html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
-                
-                const sources = ['Emprunt', 'Pret', 'Transfert', 'Change'];
-                sources.forEach(source => {
-                    if (autresSourcesData[source]) {
-                        // Pas d'événements cliquables dans les résultats de recherche
-                        html += `<tr><td class="category">${source}</td>`;
-                        Object.keys(columnMapping).forEach(currency => {
-                            const value = autresSourcesData[source][currency] || 0;
-                            html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
-                        });
-                        html += '</tr>';
-                    }
-                });
-                
-                html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
-                Object.keys(columnMapping).forEach(currency => {
-                    const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                    const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
-                    const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                    const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
-                    
-                    const enMain = totals[currency]['FondsPropres'] + emprunt - pret - transfert - change;
-                    html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
-                });
-                html += '</tr>';
             }
+        });
+        
+        html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
+        Object.keys(columnMapping).forEach(currency => {
+            const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+            const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
+            const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+            const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
             
-            html += '</table>';
-            html += '</div>';
-            
-            return html;
+            const enMain = totals[currency]['FondsPropres'] + emprunt - pret - transfert - change;
+            html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
+        });
+        html += '</tr>';
+    }
+
+    // --- NOUVELLE SECTION : Opérations du jour (Emprunt, Prêt, Transfert, Change) ---
+    const aDesOperations = 
+        Object.values(empruntLocal).some(v => v !== 0) ||
+        Object.values(pretLocal).some(v => v !== 0) ||
+        Object.values(transfertLocal).some(v => v !== 0) ||
+        Object.values(changeLocal).some(v => v !== 0);
+
+    if (aDesOperations) {
+        html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">OPÉRATIONS DU JOUR</td></tr>';
+        
+        // Emprunt
+        if (Object.values(empruntLocal).some(v => v !== 0)) {
+            html += '<tr><td class="category">Emprunt (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(empruntLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
         }
         
+        // Prêt
+        if (Object.values(pretLocal).some(v => v !== 0)) {
+            html += '<tr><td class="category">Prêt (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(pretLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+        }
+        
+        // Transfert
+        if (Object.values(transfertLocal).some(v => v !== 0)) {
+            html += '<tr><td class="category">Transfert (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(transfertLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+        }
+        
+        // Change
+        if (Object.values(changeLocal).some(v => v !== 0)) {
+            html += '<tr><td class="category">Change (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(changeLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+        }
+    }
+
+    html += '</table>';
+    html += '</div>';
+    
+    return html;
+}
         function displayResults(results, searchTerm) {
             const resultsSection = document.getElementById('resultsSection');
             const resultContent = document.getElementById('resultContent');
