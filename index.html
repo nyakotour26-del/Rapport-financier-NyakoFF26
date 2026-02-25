@@ -1611,119 +1611,91 @@ async function loadAutresSources() {
     }
 }
 
-        // Fonction pour afficher une bulle générique (Emprunt, Pret, Transfert, Change)
-        function showDetailsBulle(event, title, data) {
-            const bulle = document.getElementById('detailsBulle');
-            const overlay = document.getElementById('detailsOverlay');
-            const content = document.getElementById('detailsBulleContent');
-            const titleElement = document.getElementById('bulleTitle');
-            
-            if (title === 'Pret') {
-                titleElement.textContent = '📋 DÉTAILS PRET (REMBOURSEMENT)';
-            } else {
-                titleElement.textContent = `📋 DÉTAILS ${title.toUpperCase()}`;
-            }
-            
-            let html = '<table>';
-            
-            if (title === 'Pret') {
-                html += '<tr><th>Opération</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
-                
-                // Ligne pret donné (montant)
-                html += '<tr>';
-                html += `<td>Prêt donné</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Ariary || 0, 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Euro || 0, 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Livre || 0, 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
-                html += '</tr>';
-                
-                // Ligne remboursement pret
-                html += '<tr>';
-                html += `<td>Remboursement prêt</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Ariary || 0, 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Euro || 0, 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Livre || 0, 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
-                html += '</tr>';
-                
-                // Ligne solde (pret donné - remboursement)
-                const solde = {
-                    'Ariary': (data.montant?.Ariary || 0) - (data.remboursement?.Ariary || 0),
-                    'Euro': (data.montant?.Euro || 0) - (data.remboursement?.Euro || 0),
-                    'Franc Suisse': (data.montant?.['Franc Suisse'] || 0) - (data.remboursement?.['Franc Suisse'] || 0),
-                    'Livre': (data.montant?.Livre || 0) - (data.remboursement?.Livre || 0),
-                    'Banque Euro': (data.montant?.['Banque Euro'] || 0) - (data.remboursement?.['Banque Euro'] || 0)
-                };
-                
-                html += '<tr class="total-row">';
-                html += '<td>SOLDE (Prêt donné - Remboursement)</td>';
-                html += `<td>${formatNumberWithUnit(solde['Ariary'], 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Euro'], 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Franc Suisse'], 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Livre'], 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Banque Euro'], 'Banque Euro')}</td>`;
-                html += '</tr>';
-            } else {
-                html += '<tr><th>Opération</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
-                
-                // Ligne montant/emprunt
-                html += '<tr>';
-                html += `<td>${title} reçu</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Ariary || 0, 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Euro || 0, 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.Livre || 0, 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.montant?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
-                html += '</tr>';
-                
-                // Ligne remboursement
-                html += '<tr>';
-                html += `<td>Remboursement ${title}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Ariary || 0, 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Euro || 0, 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.Livre || 0, 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(data.remboursement?.['Banque Euro'] || 0, 'Banque Euro')}</td>`;
-                html += '</tr>';
-                
-                // Ligne solde
-                const solde = {
-                    'Ariary': (data.montant?.Ariary || 0) - (data.remboursement?.Ariary || 0),
-                    'Euro': (data.montant?.Euro || 0) - (data.remboursement?.Euro || 0),
-                    'Franc Suisse': (data.montant?.['Franc Suisse'] || 0) - (data.remboursement?.['Franc Suisse'] || 0),
-                    'Livre': (data.montant?.Livre || 0) - (data.remboursement?.Livre || 0),
-                    'Banque Euro': (data.montant?.['Banque Euro'] || 0) - (data.remboursement?.['Banque Euro'] || 0)
-                };
-                
-                html += '<tr class="total-row">';
-                html += '<td>SOLDE</td>';
-                html += `<td>${formatNumberWithUnit(solde['Ariary'], 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Euro'], 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Franc Suisse'], 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Livre'], 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(solde['Banque Euro'], 'Banque Euro')}</td>`;
-                html += '</tr>';
-            }
-            
-            html += '</table>';
-            content.innerHTML = html;
-            
-            // Positionner la bulle en haut de l'écran
-            bulle.style.display = 'block';
-            overlay.style.display = 'block';
-            
-            // Centrer horizontalement et placer en haut
-            const bulleWidth = bulle.offsetWidth;
-            const windowWidth = window.innerWidth;
-            let left = (windowWidth - bulleWidth) / 2;
-            if (left < 20) left = 20;
-            
-            bulle.style.left = left + 'px';
-            bulle.style.top = '20px';
-        }
+        // Fonction pour afficher une bulle générique (Emprunt, Prêt, Transfert, Change)
+function showDetailsBulle(event, title, data) {
+    const bulle = document.getElementById('detailsBulle');
+    const overlay = document.getElementById('detailsOverlay');
+    const content = document.getElementById('detailsBulleContent');
+    const titleElement = document.getElementById('bulleTitle');
+    
+    titleElement.textContent = `📋 DÉTAILS ${title.toUpperCase()}`;
+    
+    let html = '<table>';
+    html += '<tr><th>Opération</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+    
+    // Déterminer le libellé approprié selon le type
+    let libelleMontant = '';
+    if (title === 'Emprunt') libelleMontant = 'Emprunt reçu';
+    else if (title === 'Prêt') libelleMontant = 'Prêt accordé';
+    else if (title === 'Transfert') libelleMontant = 'Transfert reçu';
+    else if (title === 'Change') libelleMontant = 'Change reçu';
+    
+    // Ligne montant - Correction de l'alignement des colonnes
+    html += '<tr>';
+    html += `<td>${libelleMontant}</td>`;
+    
+    // Vérifier si data.montant existe et a les bonnes propriétés
+    // Pour Emprunt : montant vient de I18 (index 8) = Ariary, J18 (index 9) = Euro, etc.
+    // Pour Prêt : montant vient de B19 (index 1) = Ariary, C19 (index 2) = Euro, etc.
+    if (data.montant) {
+        html += `<td>${formatNumberWithUnit(data.montant.Ariary || 0, 'Ariary')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.montant.Euro || 0, 'Euro')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.montant['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+    } else {
+        html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+    }
+    html += '</tr>';
+    
+    // Ligne remboursement
+    html += '<tr>';
+    html += `<td>Remboursement ${title}</td>`;
+    if (data.remboursement) {
+        html += `<td>${formatNumberWithUnit(data.remboursement.Ariary || 0, 'Ariary')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.remboursement.Euro || 0, 'Euro')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.remboursement['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}</td>`;
+        html += `<td>${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+    } else {
+        html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+    }
+    html += '</tr>';
+    
+    // Ligne solde
+    const solde = {
+        'Ariary': (data.montant?.Ariary || 0) - (data.remboursement?.Ariary || 0),
+        'Euro': (data.montant?.Euro || 0) - (data.remboursement?.Euro || 0),
+        'Franc Suisse': (data.montant?.['Franc Suisse'] || 0) - (data.remboursement?.['Franc Suisse'] || 0),
+        'Livre': (data.montant?.Livre || 0) - (data.remboursement?.Livre || 0),
+        'Banque Euro': (data.montant?.['Banque Euro'] || 0) - (data.remboursement?.['Banque Euro'] || 0)
+    };
+    
+    html += '<tr class="total-row">';
+    html += '<td>SOLDE</td>';
+    html += `<td>${formatNumberWithUnit(solde['Ariary'], 'Ariary')}</td>`;
+    html += `<td>${formatNumberWithUnit(solde['Euro'], 'Euro')}</td>`;
+    html += `<td>${formatNumberWithUnit(solde['Franc Suisse'], 'Franc Suisse')}</td>`;
+    html += `<td>${formatNumberWithUnit(solde['Livre'], 'Livre')}</td>`;
+    html += `<td>${formatNumberWithUnit(solde['Banque Euro'], 'Banque Euro')}</td>`;
+    html += '</tr>';
+    
+    html += '</table>';
+    content.innerHTML = html;
+    
+    // Positionner la bulle en haut de l'écran
+    bulle.style.display = 'block';
+    overlay.style.display = 'block';
+    
+    // Centrer horizontalement et placer en haut
+    const bulleWidth = bulle.offsetWidth;
+    const windowWidth = window.innerWidth;
+    let left = (windowWidth - bulleWidth) / 2;
+    if (left < 20) left = 20;
+    
+    bulle.style.left = left + 'px';
+    bulle.style.top = '20px';
+}
 
         // Fonction pour afficher la bulle des dépenses
         function showDetailsDepenses(event) {
