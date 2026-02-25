@@ -1611,7 +1611,7 @@ async function loadAutresSources() {
     }
 }
 
-        // Fonction pour afficher une bulle générique (Emprunt, Prêt, Transfert, Change)
+      // Fonction pour afficher une bulle générique (Emprunt, Prêt, Transfert, Change)
 function showDetailsBulle(event, title, data) {
     const bulle = document.getElementById('detailsBulle');
     const overlay = document.getElementById('detailsOverlay');
@@ -1630,19 +1630,24 @@ function showDetailsBulle(event, title, data) {
     else if (title === 'Transfert') libelleMontant = 'Transfert reçu';
     else if (title === 'Change') libelleMontant = 'Change reçu';
     
-    // Ligne montant - Correction de l'alignement des colonnes
+    // Ligne montant
     html += '<tr>';
     html += `<td>${libelleMontant}</td>`;
     
-    // Vérifier si data.montant existe et a les bonnes propriétés
-    // Pour Emprunt : montant vient de I18 (index 8) = Ariary, J18 (index 9) = Euro, etc.
-    // Pour Prêt : montant vient de B19 (index 1) = Ariary, C19 (index 2) = Euro, etc.
-    if (data.montant) {
-        html += `<td>${formatNumberWithUnit(data.montant.Ariary || 0, 'Ariary')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.montant.Euro || 0, 'Euro')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.montant['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+    // Extraire les valeurs dans le bon ordre
+    if (data && data.montant) {
+        // S'assurer que les valeurs sont dans l'ordre correct des colonnes
+        const ariary = data.montant.Ariary || 0;
+        const euro = data.montant.Euro || 0;
+        const francSuisse = data.montant['Franc Suisse'] || 0;
+        const livre = data.montant.Livre || 0;
+        const banqueEuro = data.montant['Banque Euro'] || 0;
+        
+        html += `<td>${formatNumberWithUnit(ariary, 'Ariary')}</td>`;
+        html += `<td>${formatNumberWithUnit(euro, 'Euro')}</td>`;
+        html += `<td>${formatNumberWithUnit(francSuisse, 'Franc Suisse')}</td>`;
+        html += `<td>${formatNumberWithUnit(livre, 'Livre')}</td>`;
+        html += `<td>${formatNumberWithUnit(banqueEuro, 'Banque Euro')}</td>`;
     } else {
         html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
     }
@@ -1651,43 +1656,47 @@ function showDetailsBulle(event, title, data) {
     // Ligne remboursement
     html += '<tr>';
     html += `<td>Remboursement ${title}</td>`;
-    if (data.remboursement) {
-        html += `<td>${formatNumberWithUnit(data.remboursement.Ariary || 0, 'Ariary')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.remboursement.Euro || 0, 'Euro')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.remboursement['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+    
+    if (data && data.remboursement) {
+        const ariary = data.remboursement.Ariary || 0;
+        const euro = data.remboursement.Euro || 0;
+        const francSuisse = data.remboursement['Franc Suisse'] || 0;
+        const livre = data.remboursement.Livre || 0;
+        const banqueEuro = data.remboursement['Banque Euro'] || 0;
+        
+        html += `<td>${formatNumberWithUnit(ariary, 'Ariary')}</td>`;
+        html += `<td>${formatNumberWithUnit(euro, 'Euro')}</td>`;
+        html += `<td>${formatNumberWithUnit(francSuisse, 'Franc Suisse')}</td>`;
+        html += `<td>${formatNumberWithUnit(livre, 'Livre')}</td>`;
+        html += `<td>${formatNumberWithUnit(banqueEuro, 'Banque Euro')}</td>`;
     } else {
         html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
     }
     html += '</tr>';
     
     // Ligne solde
-    const solde = {
-        'Ariary': (data.montant?.Ariary || 0) - (data.remboursement?.Ariary || 0),
-        'Euro': (data.montant?.Euro || 0) - (data.remboursement?.Euro || 0),
-        'Franc Suisse': (data.montant?.['Franc Suisse'] || 0) - (data.remboursement?.['Franc Suisse'] || 0),
-        'Livre': (data.montant?.Livre || 0) - (data.remboursement?.Livre || 0),
-        'Banque Euro': (data.montant?.['Banque Euro'] || 0) - (data.remboursement?.['Banque Euro'] || 0)
-    };
+    const soldeAriary = (data?.montant?.Ariary || 0) - (data?.remboursement?.Ariary || 0);
+    const soldeEuro = (data?.montant?.Euro || 0) - (data?.remboursement?.Euro || 0);
+    const soldeFrancSuisse = (data?.montant?.['Franc Suisse'] || 0) - (data?.remboursement?.['Franc Suisse'] || 0);
+    const soldeLivre = (data?.montant?.Livre || 0) - (data?.remboursement?.Livre || 0);
+    const soldeBanqueEuro = (data?.montant?.['Banque Euro'] || 0) - (data?.remboursement?.['Banque Euro'] || 0);
     
     html += '<tr class="total-row">';
     html += '<td>SOLDE</td>';
-    html += `<td>${formatNumberWithUnit(solde['Ariary'], 'Ariary')}</td>`;
-    html += `<td>${formatNumberWithUnit(solde['Euro'], 'Euro')}</td>`;
-    html += `<td>${formatNumberWithUnit(solde['Franc Suisse'], 'Franc Suisse')}</td>`;
-    html += `<td>${formatNumberWithUnit(solde['Livre'], 'Livre')}</td>`;
-    html += `<td>${formatNumberWithUnit(solde['Banque Euro'], 'Banque Euro')}</td>`;
+    html += `<td>${formatNumberWithUnit(soldeAriary, 'Ariary')}</td>`;
+    html += `<td>${formatNumberWithUnit(soldeEuro, 'Euro')}</td>`;
+    html += `<td>${formatNumberWithUnit(soldeFrancSuisse, 'Franc Suisse')}</td>`;
+    html += `<td>${formatNumberWithUnit(soldeLivre, 'Livre')}</td>`;
+    html += `<td>${formatNumberWithUnit(soldeBanqueEuro, 'Banque Euro')}</td>`;
     html += '</tr>';
     
     html += '</table>';
     content.innerHTML = html;
     
-    // Positionner la bulle en haut de l'écran
+    // Positionner la bulle
     bulle.style.display = 'block';
     overlay.style.display = 'block';
     
-    // Centrer horizontalement et placer en haut
     const bulleWidth = bulle.offsetWidth;
     const windowWidth = window.innerWidth;
     let left = (windowWidth - bulleWidth) / 2;
@@ -1696,7 +1705,6 @@ function showDetailsBulle(event, title, data) {
     bulle.style.left = left + 'px';
     bulle.style.top = '20px';
 }
-
         // Fonction pour afficher la bulle des dépenses
         function showDetailsDepenses(event) {
             const bulle = document.getElementById('detailsBulle');
