@@ -1370,6 +1370,3596 @@
         // Données détaillées par catégorie de dépense
         let detailsDepensesParCategorie = {};
         
+        // Données pour les détails dons (récupérés depuis AUTRES_SOURCES_URL)
+        let detailsDonData = [];
+        
+        // Données pour les dons par localité (colonnes F, J, N, R, V) - depuis GOOGLE_SHEETS_URL
+        let donsParLocaliteData = [];
+        
+        // Données pour les dons membres (détail par membre)
+        let donsMembresData = [];
+        
+        // Données pour les ventes (D, H, L, P, T) - depuis GOOGLE_SHEETS_URL
+        let detailsVentesData = [];
+        
+        // Données pour les collectes (E, I, M, Q, U) - depuis GOOGLE_SHEETS_URL
+        let detailsCollectesData = [];
+        
+        // Données pour les détails Emprunt (I33:N...)
+        let detailsEmpruntTiersData = [];
+        
+        // Données pour les détails Prêt (B33:G...)
+        let detailsPretTiersData = [];
+        
+        // Données pour les bulles emprunt, prêt, transfert, change
+        let detailsEmpruntData = { montant: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }, remboursement: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 } };
+        let detailsPretData = { montant: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }, remboursement: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 } };
+        let detailsTransfertData = { montant: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }, remboursement: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 } };
+        let detailsChangeData = { montant: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }, remboursement: { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 } };
+
+        // Indices des colonnes pour les données par localité (0 = colonne A)
+        const LOCAL_COLUMNS = {
+            emprunt: { ariary: 23, euro: 24, francSuisse: 25, livre: 26, banqueEuro: 27 },
+            pret: { ariary: 28, euro: 29, francSuisse: 30, livre: 31, banqueEuro: 32 },
+            transfert: { ariary: 33, euro: 34, francSuisse: 35, livre: 36, banqueEuro: 37 },
+            change: { ariary: 38, euro: 39, francSuisse: 40, livre: 41, banqueEuro: 42 }
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page chargée, initialisation...');
+            
+            document.getElementById('searchForm').addEventListener('submit', handleSearch);
+            document.getElementById('prevMonth').addEventListener('click', prevMonth);
+            document.getElementById('nextMonth').addEventListener('click', nextMonth);
+            document.getElementById('showAllButton').addEventListener('click', showAllData);
+            document.getElementById('closeResults').addEventListener('click', closeResults);
+            document.getElementById('tryDirect').addEventListener('click', () => loadDataFromGoogleSheets('direct'));
+            document.getElementById('tryProxy').addEventListener('click', () => loadDataFromGoogleSheets('proxy'));
+            document.getElementById('tryCors').addEventListener('click', () => loadDataFromGoogleSheets('cors'));
+            
+            const countryButtons = document.querySelectorAll('.country-button');
+            countryButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const pays = this.getAttribute('data-pays');
+                    showCountrySummary(pays);
+                });
+            });
+            
+            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkPassword();
+                }
+            });
+            
+            // Charger les données
+            loadDataFromGoogleSheets('direct');
+            
+            // Initialiser le bouton PDF comme verrouillé
+            lockPDFButton();
+            
+            // Vérifier l'authentification existante
+            checkExistingAuthentication();
+        });
+
+        function handlePDFButton() {
+            if (isAuthenticated) {
+                generatePDF();
+            } else {
+                showPasswordModal();
+            }
+        }
+
+        function lockPDFButton() {
+            const pdfButton = document.getElementById('pdfButton');
+            pdfButton.classList.add('locked');
+            pdfButton.classList.remove('unlocked');
+            pdfButton.innerHTML = '🔒 Exporter Rapport PDF Complet';
+        }
+
+        function unlockPDFButton() {
+            const pdfButton = document.getElementById('pdfButton');
+            pdfButton.classList.remove('locked');
+            pdfButton.classList.add('unlocked');
+            pdfButton.innerHTML = '📄 Exporter Rapport PDF Complet';
+        }
+
+        function showPasswordModal() {
+            document.getElementById('passwordModal').style.display = 'flex';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+            document.getElementById('passwordInput').focus();
+        }
+
+        function closePasswordModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordError').style.display = 'none';
+        }
+
+        function checkPassword() {
+            const passwordInput = document.getElementById('passwordInput');
+            const passwordError = document.getElementById('passwordError');
+            const enteredPassword = passwordInput.value.trim();
+            
+            if (enteredPassword === CORRECT_PASSWORD) {
+                isAuthenticated = true;
+                closePasswordModal();
+                unlockPDFButton();
+                showTemporaryMessage('✅ Accès autorisé à l\'export PDF', 'success');
+                localStorage.setItem('finadmin_authenticated', 'true');
+                localStorage.setItem('finadmin_timestamp', Date.now().toString());
+            } else {
+                passwordError.style.display = 'block';
+                passwordInput.value = '';
+                passwordInput.focus();
+                passwordInput.style.animation = 'shake 0.5s';
+                setTimeout(() => {
+                    passwordInput.style.animation = '';
+                }, 500);
+            }
+        }
+
+        function checkExistingAuthentication() {
+            const authenticated = localStorage.getItem('finadmin_authenticated');
+            const timestamp = localStorage.getItem('finadmin_timestamp');
+            
+            if (authenticated === 'true' && timestamp) {
+                const now = Date.now();
+                const authTime = parseInt(timestamp);
+                const hoursSinceAuth = (now - authTime) / (1000 * 60 * 60);
+                
+                if (hoursSinceAuth < 8) {
+                    isAuthenticated = true;
+                    unlockPDFButton();
+                } else {
+                    localStorage.removeItem('finadmin_authenticated');
+                    localStorage.removeItem('finadmin_timestamp');
+                }
+            }
+        }
+
+        function showTemporaryMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: var(--border-radius);
+                color: white;
+                font-weight: bold;
+                z-index: 1001;
+                box-shadow: var(--box-shadow);
+                animation: slideIn 0.3s ease-out;
+            `;
+            
+            if (type === 'success') {
+                messageDiv.style.background = 'linear-gradient(135deg, #00b894 0%, #00a085 100%)';
+            } else {
+                messageDiv.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+            }
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-5px); }
+                75% { transform: translateX(5px); }
+            }
+            
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Charger les dons membres
+        async function loadDonsMembres() {
+            try {
+                console.log('Chargement des dons membres...');
+                const response = await fetch(DONS_MEMBRES_URL);
+                if (response.ok) {
+                    const csvText = await response.text();
+                    const lines = parseCSV(csvText);
+                    
+                    donsMembresData = [];
+                    
+                    for (let i = 2; i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 4) {
+                            const nomMembre = row[0] ? row[0].trim() : '';
+                            
+                            if (nomMembre && nomMembre !== '') {
+                                const promesse = parseFloat(cleanNumber(row[1] || '0'));
+                                const paye = parseFloat(cleanNumber(row[2] || '0'));
+                                const reste = parseFloat(cleanNumber(row[3] || '0'));
+                                
+                                if (promesse > 0 || paye > 0 || reste > 0) {
+                                    donsMembresData.push({
+                                        'membre': nomMembre,
+                                        'promesse': promesse,
+                                        'paye': paye,
+                                        'reste': reste
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log('✅ Dons membres chargés:', donsMembresData.length, 'membres');
+                } else {
+                    console.error('Erreur chargement dons membres:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Erreur chargement dons membres:', error);
+            }
+        }
+
+        // Charger les détails des ventes, collectes et dons depuis GOOGLE_SHEETS_URL (gid=106676164)
+        async function loadDetailsFromMainSheet() {
+            try {
+                console.log('Chargement des détails depuis GOOGLE_SHEETS_URL (gid=106676164)...');
+                const response = await fetch(GOOGLE_SHEETS_URL);
+                if (response.ok) {
+                    const csvText = await response.text();
+                    const lines = parseCSV(csvText);
+                    
+                    // Initialiser les tableaux
+                    detailsVentesData = [];
+                    detailsCollectesData = [];
+                    donsParLocaliteData = [];
+                    
+                    // Parcourir toutes les lignes
+                    for (let i = 0; i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 22) { // S'assurer d'avoir assez de colonnes
+                            
+                            // La localité est dans la colonne B (index 1)
+                            const localite = row[1] ? row[1].trim() : '';
+                            
+                            if (localite && localite !== '') {
+                                // 1. VENTES - Colonnes D(3), H(7), L(11), P(15), T(19)
+                                const venteAriary = parseFloat(cleanNumber(row[3] || '0'));
+                                const venteEuro = parseFloat(cleanNumber(row[7] || '0'));
+                                const venteSuisse = parseFloat(cleanNumber(row[11] || '0'));
+                                const venteLivre = parseFloat(cleanNumber(row[15] || '0'));
+                                const venteBanque = parseFloat(cleanNumber(row[19] || '0'));
+                                
+                                if (venteAriary > 0 || venteEuro > 0 || venteSuisse > 0 || venteLivre > 0 || venteBanque > 0) {
+                                    detailsVentesData.push({
+                                        'localite': localite,
+                                        'Ariary': venteAriary,
+                                        'Euro': venteEuro,
+                                        'Franc Suisse': venteSuisse,
+                                        'Livre': venteLivre,
+                                        'Banque Euro': venteBanque
+                                    });
+                                }
+                                
+                                // 2. COLLECTES - Colonnes E(4), I(8), M(12), Q(16), U(20)
+                                const collecteAriary = parseFloat(cleanNumber(row[4] || '0'));
+                                const collecteEuro = parseFloat(cleanNumber(row[8] || '0'));
+                                const collecteSuisse = parseFloat(cleanNumber(row[12] || '0'));
+                                const collecteLivre = parseFloat(cleanNumber(row[16] || '0'));
+                                const collecteBanque = parseFloat(cleanNumber(row[20] || '0'));
+                                
+                                if (collecteAriary > 0 || collecteEuro > 0 || collecteSuisse > 0 || collecteLivre > 0 || collecteBanque > 0) {
+                                    detailsCollectesData.push({
+                                        'localite': localite,
+                                        'Ariary': collecteAriary,
+                                        'Euro': collecteEuro,
+                                        'Franc Suisse': collecteSuisse,
+                                        'Livre': collecteLivre,
+                                        'Banque Euro': collecteBanque
+                                    });
+                                }
+                                
+                                // 3. DONS PAR LOCALITÉ - Colonnes F(5), J(9), N(13), R(17), V(21)
+                                const donAriary = parseFloat(cleanNumber(row[5] || '0'));
+                                const donEuro = parseFloat(cleanNumber(row[9] || '0'));
+                                const donSuisse = parseFloat(cleanNumber(row[13] || '0'));
+                                const donLivre = parseFloat(cleanNumber(row[17] || '0'));
+                                const donBanque = parseFloat(cleanNumber(row[21] || '0'));
+                                
+                                if (donAriary > 0 || donEuro > 0 || donSuisse > 0 || donLivre > 0 || donBanque > 0) {
+                                    donsParLocaliteData.push({
+                                        'localite': localite,
+                                        'Ariary': donAriary,
+                                        'Euro': donEuro,
+                                        'Franc Suisse': donSuisse,
+                                        'Livre': donLivre,
+                                        'Banque Euro': donBanque
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    console.log('✅ Détails chargés depuis GOOGLE_SHEETS_URL:', {
+                        ventes: detailsVentesData.length,
+                        collectes: detailsCollectesData.length,
+                        donsParLocalite: donsParLocaliteData.length
+                    });
+                } else {
+                    console.error('Erreur chargement GOOGLE_SHEETS_URL:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Erreur chargement GOOGLE_SHEETS_URL:', error);
+            }
+        }
+
+        // Charger toutes les données supplémentaires
+        async function loadAutresSources() {
+            try {
+                console.log('Chargement des autres sources...');
+                
+                // Charger d'abord les détails depuis la feuille principale
+                await loadDetailsFromMainSheet();
+                
+                // Charger les dons membres
+                await loadDonsMembres();
+                
+                // Charger les autres données (dépenses, emprunts, etc.) depuis AUTRES_SOURCES_URL
+                const response = await fetch(AUTRES_SOURCES_URL);
+                if (response.ok) {
+                    const csvText = await response.text();
+                    const lines = parseCSV(csvText);
+                    
+                    // 1. Charger les détails dépenses (B2:G15) - récapitulatif
+                    detailsDepensesData = [];
+                    for (let i = 1; i < 15 && i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 7) {
+                            const titre = row[1] ? row[1].trim() : '';
+                            const categoriesValides = [
+                                'Admin', 'Artisanat', 'Cadeaux', 'Divers', 'Don',
+                                'Nourritures', 'Logistique', 'Répétition', 'Tenue',
+                                'Tp terrestre&frais', 'Tp aerien&frais', 'Vente', 'Visa'
+                            ];
+                            if (titre && categoriesValides.includes(titre)) {
+                                detailsDepensesData.push({
+                                    'Depenses': titre,
+                                    'Ariary': parseFloat(cleanNumber(row[2] || '0')),
+                                    'Euro': parseFloat(cleanNumber(row[3] || '0')),
+                                    'Franc Suisse': parseFloat(cleanNumber(row[4] || '0')),
+                                    'Livre': parseFloat(cleanNumber(row[5] || '0')),
+                                    'Banque Euro': parseFloat(cleanNumber(row[6] || '0'))
+                                });
+                            }
+                        }
+                    }
+                    
+                    // 2. Charger les détails don (I3:N4) - récapitulatif
+                    detailsDonData = [];
+                    for (let i = 2; i < 4 && i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 14) {
+                            // Décalage: Ariary est maintenant à la colonne I (index 8)
+                            // Euro à la colonne J (index 9), etc.
+                            const titre = i === 2 ? 'Don Membre' : 'Don Divers';
+                            detailsDonData.push({
+                                'Type': titre,
+                                'Ariary': parseFloat(cleanNumber(row[8] || '0')),  // Colonne I
+                                'Euro': parseFloat(cleanNumber(row[9] || '0')),    // Colonne J
+                                'Franc Suisse': parseFloat(cleanNumber(row[10] || '0')), // Colonne K
+                                'Livre': parseFloat(cleanNumber(row[11] || '0')),  // Colonne L
+                                'Banque Euro': parseFloat(cleanNumber(row[12] || '0')) // Colonne M
+                            });
+                        }
+                    }
+                    
+                    // 3. Charger les données des tiers pour EMPRUNT (I33:N...)
+                    detailsEmpruntTiersData = [];
+                    for (let i = 32; i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 14) {
+                            const nomTiers = row[8] ? row[8].trim() : '';
+                            if (nomTiers && nomTiers !== '' && !nomTiers.includes('TOTAL')) {
+                                const montant = {
+                                    'Ariary': parseFloat(cleanNumber(row[9] || '0')),
+                                    'Euro': parseFloat(cleanNumber(row[10] || '0')),
+                                    'Franc Suisse': parseFloat(cleanNumber(row[11] || '0')),
+                                    'Livre': parseFloat(cleanNumber(row[12] || '0')),
+                                    'Banque Euro': parseFloat(cleanNumber(row[13] || '0'))
+                                };
+                                
+                                if (montant.Ariary > 0 || montant.Euro > 0 || montant['Franc Suisse'] > 0 || montant.Livre > 0 || montant['Banque Euro'] > 0) {
+                                    detailsEmpruntTiersData.push({
+                                        'tiers': nomTiers,
+                                        ...montant
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 4. Charger les données des tiers pour PRÊT (B33:G...)
+                    detailsPretTiersData = [];
+                    for (let i = 32; i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 7) {
+                            const nomTiers = row[1] ? row[1].trim() : '';
+                            if (nomTiers && nomTiers !== '' && !nomTiers.includes('TOTAL')) {
+                                const montant = {
+                                    'Ariary': parseFloat(cleanNumber(row[2] || '0')),
+                                    'Euro': parseFloat(cleanNumber(row[3] || '0')),
+                                    'Franc Suisse': parseFloat(cleanNumber(row[4] || '0')),
+                                    'Livre': parseFloat(cleanNumber(row[5] || '0')),
+                                    'Banque Euro': parseFloat(cleanNumber(row[6] || '0'))
+                                };
+                                
+                                if (montant.Ariary > 0 || montant.Euro > 0 || montant['Franc Suisse'] > 0 || montant.Livre > 0 || montant['Banque Euro'] > 0) {
+                                    detailsPretTiersData.push({
+                                        'tiers': nomTiers,
+                                        ...montant
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 5. Charger Emprunt (ligne 18)
+                    if (lines.length > 18) {
+                        const ligne18 = lines[17];
+                        if (ligne18 && ligne18.length >= 14) {
+                            detailsEmpruntData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne18[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne18[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne18[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne18[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne18[13] || '0'))
+                            };
+                            
+                            detailsEmpruntData.remboursement = {
+                                'Ariary': parseFloat(cleanNumber(ligne18[2] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne18[3] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne18[4] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne18[5] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne18[6] || '0'))
+                            };
+                            
+                            autresSourcesData['Emprunt'] = {
+                                'Ariary': detailsEmpruntData.montant.Ariary - detailsEmpruntData.remboursement.Ariary,
+                                'Euro': detailsEmpruntData.montant.Euro - detailsEmpruntData.remboursement.Euro,
+                                'Franc Suisse': detailsEmpruntData.montant['Franc Suisse'] - detailsEmpruntData.remboursement['Franc Suisse'],
+                                'Livre': detailsEmpruntData.montant.Livre - detailsEmpruntData.remboursement.Livre,
+                                'Banque Euro': detailsEmpruntData.montant['Banque Euro'] - detailsEmpruntData.remboursement['Banque Euro']
+                            };
+                        }
+                    }
+                    
+                    // 6. Charger Prêt (ligne 19)
+                    if (lines.length > 19) {
+                        const ligne19 = lines[18];
+                        if (ligne19 && ligne19.length >= 14) {
+                            detailsPretData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne19[2] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne19[3] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne19[4] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne19[5] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne19[6] || '0'))
+                            };
+                            
+                            detailsPretData.remboursement = {
+                                'Ariary': parseFloat(cleanNumber(ligne19[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne19[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne19[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne19[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne19[13] || '0'))
+                            };
+                            
+                            autresSourcesData['Pret'] = {
+                                'Ariary': detailsPretData.montant.Ariary - detailsPretData.remboursement.Ariary,
+                                'Euro': detailsPretData.montant.Euro - detailsPretData.remboursement.Euro,
+                                'Franc Suisse': detailsPretData.montant['Franc Suisse'] - detailsPretData.remboursement['Franc Suisse'],
+                                'Livre': detailsPretData.montant.Livre - detailsPretData.remboursement.Livre,
+                                'Banque Euro': detailsPretData.montant['Banque Euro'] - detailsPretData.remboursement['Banque Euro']
+                            };
+                        }
+                    }
+                    
+                    // 7. Charger Transfert (ligne 20)
+                    if (lines.length > 20) {
+                        const ligne20 = lines[19];
+                        if (ligne20 && ligne20.length >= 14) {
+                            detailsTransfertData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne20[2] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne20[3] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne20[4] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne20[5] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne20[6] || '0'))
+                            };
+                            
+                            detailsTransfertData.remboursement = {
+                                'Ariary': parseFloat(cleanNumber(ligne20[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne20[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne20[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne20[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne20[13] || '0'))
+                            };
+                            
+                            autresSourcesData['Transfert'] = {
+                                'Ariary': detailsTransfertData.montant.Ariary - detailsTransfertData.remboursement.Ariary,
+                                'Euro': detailsTransfertData.montant.Euro - detailsTransfertData.remboursement.Euro,
+                                'Franc Suisse': detailsTransfertData.montant['Franc Suisse'] - detailsTransfertData.remboursement['Franc Suisse'],
+                                'Livre': detailsTransfertData.montant.Livre - detailsTransfertData.remboursement.Livre,
+                                'Banque Euro': detailsTransfertData.montant['Banque Euro'] - detailsTransfertData.remboursement['Banque Euro']
+                            };
+                        }
+                    }
+                    
+                    // 8. Charger Change (ligne 21)
+                    if (lines.length > 21) {
+                        const ligne21 = lines[20];
+                        if (ligne21 && ligne21.length >= 14) {
+                            detailsChangeData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne21[2] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne21[3] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne21[4] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne21[5] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne21[6] || '0'))
+                            };
+                            
+                            detailsChangeData.remboursement = {
+                                'Ariary': parseFloat(cleanNumber(ligne21[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne21[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne21[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne21[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne21[13] || '0'))
+                            };
+                            
+                            autresSourcesData['Change'] = {
+                                'Ariary': detailsChangeData.montant.Ariary - detailsChangeData.remboursement.Ariary,
+                                'Euro': detailsChangeData.montant.Euro - detailsChangeData.remboursement.Euro,
+                                'Franc Suisse': detailsChangeData.montant['Franc Suisse'] - detailsChangeData.remboursement['Franc Suisse'],
+                                'Livre': detailsChangeData.montant.Livre - detailsChangeData.remboursement.Livre,
+                                'Banque Euro': detailsChangeData.montant['Banque Euro'] - detailsChangeData.remboursement['Banque Euro']
+                            };
+                        }
+                    }
+                    
+                    console.log('✅ Données supplémentaires chargées');
+                    
+                    if (dataLoaded) {
+                        displayGlobalStats();
+                    }
+                } else {
+                    console.error('Erreur chargement autres sources:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Erreur chargement autres sources:', error);
+            }
+        }
+
+        function processCSVData(csvText) {
+            try {
+                if (!csvText || csvText.trim().length === 0) {
+                    throw new Error('Le fichier CSV est vide');
+                }
+                
+                const lines = parseCSV(csvText);
+                
+                if (!lines || lines.length < 5) {
+                    throw new Error('Format de données invalide');
+                }
+                
+                headers = lines[3] || [];
+                sheetData = lines.slice(4).filter(row => 
+                    row && row.some(cell => cell && cell.trim() !== '')
+                );
+                
+                console.log(`📊 ${sheetData.length} lignes de données principales chargées`);
+                
+                dataLoaded = true;
+                
+                loadAutresSources().then(() => {
+                    extractDatesWithData();
+                    renderCalendar();
+                    displayGlobalStats();
+                });
+                
+            } catch (error) {
+                console.error('❌ Erreur de traitement:', error);
+                showError(`Erreur de traitement des données: ${error.message}`);
+                showRetryOptions();
+                document.getElementById('loadingIndicator').style.display = 'none';
+            }
+        }
+
+        async function loadDataFromGoogleSheets(method = 'direct') {
+            console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('retryOptions').style.display = 'none';
+            clearErrorMessages();
+            
+            try {
+                let response;
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000);
+                
+                switch(method) {
+                    case 'direct':
+                        response = await fetch(GOOGLE_SHEETS_URL, {
+                            signal: controller.signal,
+                            headers: {
+                                'Cache-Control': 'no-cache',
+                                'Pragma': 'no-cache'
+                            }
+                        });
+                        break;
+                        
+                    case 'proxy':
+                        const proxyUrl = `https://cors-anywhere.herokuapp.com/${GOOGLE_SHEETS_URL}`;
+                        response = await fetch(proxyUrl, {
+                            signal: controller.signal,
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        break;
+                        
+                    case 'cors':
+                        const corsProxy = `https://api.allorigins.win/raw?url=${encodeURIComponent(GOOGLE_SHEETS_URL)}`;
+                        response = await fetch(corsProxy, {
+                            signal: controller.signal
+                        });
+                        break;
+                }
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const csvText = await response.text();
+                    console.log('✅ Données chargées avec succès');
+                    processCSVData(csvText);
+                    return;
+                }
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                
+            } catch (error) {
+                console.log(`❌ Échec avec ${method}:`, error.message);
+                
+                if (method === 'direct') {
+                    console.log('🔄 Essai automatique avec méthode proxy...');
+                    loadDataFromGoogleSheets('proxy');
+                } else if (method === 'proxy') {
+                    console.log('🔄 Essai automatique avec méthode CORS...');
+                    loadDataFromGoogleSheets('cors');
+                } else {
+                    showRetryOptions();
+                    showError(`Impossible de charger les données. Vérifiez:<br>
+                    1. Votre connexion internet<br>
+                    2. Que le Google Sheet est bien publié<br>
+                    3. Essayez une méthode alternative ci-dessous`);
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                }
+            }
+        }
+
+        function showRetryOptions() {
+            document.getElementById('retryOptions').style.display = 'block';
+        }
+
+        function parseCSV(csvText) {
+            const lines = [];
+            let currentLine = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < csvText.length; i++) {
+                const char = csvText[i];
+                const nextChar = csvText[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                        currentField += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    currentLine.push(currentField);
+                    currentField = '';
+                } else if (char === '\n' && !inQuotes) {
+                    currentLine.push(currentField);
+                    lines.push(currentLine);
+                    currentLine = [];
+                    currentField = '';
+                } else if (char === '\r') {
+                    continue;
+                } else {
+                    currentField += char;
+                }
+            }
+            
+            if (currentField !== '' || currentLine.length > 0) {
+                currentLine.push(currentField);
+                lines.push(currentLine);
+            }
+            
+            return lines;
+        }
+        
+        function extractDatesWithData() {
+            datesWithData = [];
+            
+            sheetData.forEach((row, index) => {
+                const dateStr = row[0] || '';
+                if (dateStr && dateStr.trim() !== '') {
+                    const date = parseDate(dateStr);
+                    if (date) {
+                        datesWithData.push({
+                            date: date,
+                            dateStr: dateStr,
+                            localite: row[1] || '',
+                            pays: row[2] || '',
+                            rowIndex: index
+                        });
+                    }
+                }
+            });
+            
+            datesWithData.sort((a, b) => a.date - b.date);
+            console.log(`📅 ${datesWithData.length} dates avec données trouvées`);
+        }
+        
+        function parseDate(dateStr) {
+            const formats = [
+                'DD/MM/YYYY',
+                'DD-MM-YYYY', 
+                'YYYY-MM-DD',
+                'MM/DD/YYYY'
+            ];
+            
+            for (const format of formats) {
+                const date = parseDateWithFormat(dateStr, format);
+                if (date && !isNaN(date.getTime())) {
+                    return date;
+                }
+            }
+            
+            const nativeDate = new Date(dateStr);
+            if (!isNaN(nativeDate.getTime())) {
+                return nativeDate;
+            }
+            
+            console.warn(`Impossible de parser la date: ${dateStr}`);
+            return null;
+        }
+        
+        function parseDateWithFormat(dateStr, format) {
+            const parts = dateStr.split(/[/\-.]/);
+            const formatParts = format.split(/[/\-.]/);
+            
+            if (parts.length !== 3) return null;
+            
+            let day, month, year;
+            
+            for (let i = 0; i < 3; i++) {
+                if (formatParts[i] === 'DD') day = parseInt(parts[i], 10);
+                else if (formatParts[i] === 'MM') month = parseInt(parts[i], 10) - 1;
+                else if (formatParts[i] === 'YYYY') year = parseInt(parts[i], 10);
+            }
+            
+            if (day && month !== undefined && year) {
+                return new Date(year, month, day);
+            }
+            
+            return null;
+        }
+        
+        function formatDateForDisplay(date) {
+            if (!date) return 'Date inconnue';
+            const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+            const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+            
+            const dayName = days[date.getDay()];
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = months[date.getMonth()];
+            const year = date.getFullYear().toString().slice(-2);
+            
+            return `${dayName} ${day}-${month}-${year}`;
+        }
+        
+        function renderCalendar() {
+            const calendarGrid = document.getElementById('calendarGrid');
+            const currentMonthElement = document.getElementById('currentMonth');
+            
+            currentMonthElement.textContent = currentDate.toLocaleDateString('fr-FR', {
+                month: 'long',
+                year: 'numeric'
+            });
+            
+            calendarGrid.innerHTML = '';
+            
+            const daysOfWeek = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+            daysOfWeek.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'calendar-day-header';
+                dayHeader.textContent = day;
+                calendarGrid.appendChild(dayHeader);
+            });
+            
+            const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            const lastDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+            
+            let firstDayOfWeek = firstDayOfMonth.getDay();
+            firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1;
+            
+            const prevMonthLastDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 0).getDate();
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = prevMonthLastDay - i;
+                calendarGrid.appendChild(day);
+            }
+            
+            for (let i = 1; i <= lastDayOfMonth.getDate(); i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day';
+                day.innerHTML = `<div>${i}</div>`;
+                
+                const dateToCheck = new Date(currentDate.getFullYear(), currentDate.getMonth(), i);
+                const dateData = datesWithData.find(item => 
+                    item.date.getDate() === dateToCheck.getDate() &&
+                    item.date.getMonth() === dateToCheck.getMonth() &&
+                    item.date.getFullYear() === dateToCheck.getFullYear()
+                );
+                
+                if (dateData) {
+                    day.classList.add('has-data');
+                    const dateInfo = document.createElement('div');
+                    dateInfo.className = 'date-info';
+                    if (dateData.localite) {
+                        dateInfo.innerHTML += `<div class="localite">${dateData.localite}</div>`;
+                    }
+                    if (dateData.pays) {
+                        dateInfo.innerHTML += `<div class="pays">${dateData.pays}</div>`;
+                    }
+                    day.appendChild(dateInfo);
+                }
+                
+                if (selectedDate && 
+                    selectedDate.getDate() === i &&
+                    selectedDate.getMonth() === currentDate.getMonth() &&
+                    selectedDate.getFullYear() === currentDate.getFullYear()) {
+                    day.classList.add('selected');
+                }
+                
+                day.addEventListener('click', () => {
+                    selectDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), i));
+                });
+                
+                calendarGrid.appendChild(day);
+            }
+            
+            const totalCells = 42;
+            const daysInCalendar = firstDayOfWeek + lastDayOfMonth.getDate();
+            const nextMonthDays = totalCells - daysInCalendar;
+            
+            for (let i = 1; i <= nextMonthDays; i++) {
+                const day = document.createElement('div');
+                day.className = 'calendar-day other-month';
+                day.textContent = i;
+                calendarGrid.appendChild(day);
+            }
+        }
+        
+        function selectDate(date) {
+            selectedDate = date;
+            renderCalendar();
+            
+            const matchingRows = findDataByDate(date);
+            
+            const dateIndex = datesWithData.findIndex(item => 
+                item.date.getDate() === date.getDate() &&
+                item.date.getMonth() === date.getMonth() &&
+                item.date.getFullYear() === date.getFullYear()
+            );
+            
+            currentDateIndex = dateIndex;
+            
+            displayResults(matchingRows, `Données financières du ${formatDateForDisplay(date)}`);
+        }
+        
+        function findDataByDate(date) {
+            return sheetData.filter((row) => {
+                const rowDateStr = row[0] || '';
+                const rowDate = parseDate(rowDateStr);
+                
+                if (rowDate) {
+                    return rowDate.getDate() === date.getDate() &&
+                           rowDate.getMonth() === date.getMonth() &&
+                           rowDate.getFullYear() === date.getFullYear();
+                }
+                
+                return false;
+            });
+        }
+        
+        function navigateDate(direction) {
+            if (datesWithData.length === 0) return;
+            
+            let newIndex = currentDateIndex;
+            
+            if (direction === 'prev' && currentDateIndex > 0) {
+                newIndex = currentDateIndex - 1;
+            } else if (direction === 'next' && currentDateIndex < datesWithData.length - 1) {
+                newIndex = currentDateIndex + 1;
+            }
+            
+            if (newIndex !== currentDateIndex) {
+                const newDate = datesWithData[newIndex].date;
+                selectDate(newDate);
+            }
+        }
+        
+        function updateNavigationButtons() {
+            const prevButton = document.getElementById('prevDate');
+            const nextButton = document.getElementById('nextDate');
+            const dateIndicator = document.getElementById('dateIndicator');
+            
+            if (datesWithData.length === 0) {
+                prevButton.disabled = true;
+                nextButton.disabled = true;
+                dateIndicator.textContent = 'Aucune date disponible';
+                return;
+            }
+            
+            if (currentDateIndex >= 0) {
+                const currentDateInfo = datesWithData[currentDateIndex];
+                const dateStr = formatDateForDisplay(currentDateInfo.date);
+                const localite = currentDateInfo.localite ? ` - ${currentDateInfo.localite}` : '';
+                const pays = currentDateInfo.pays ? ` - ${currentDateInfo.pays}` : '';
+                dateIndicator.textContent = `${dateStr}${localite}${pays}`;
+                
+                prevButton.disabled = currentDateIndex <= 0;
+                nextButton.disabled = currentDateIndex >= datesWithData.length - 1;
+            } else {
+                prevButton.disabled = true;
+                nextButton.disabled = true;
+                dateIndicator.textContent = 'Sélectionnez une date';
+            }
+        }
+        
+        function prevMonth() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        }
+        
+        function nextMonth() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        }
+        
+        function handleSearch(event) {
+            if (event) event.preventDefault();
+            
+            const searchValue = document.getElementById('searchText').value.trim();
+            currentSearchTerm = searchValue;
+            
+            if (!searchValue) {
+                alert('Veuillez entrer un mot ou une phrase pour la recherche');
+                return;
+            }
+            
+            if (sheetData.length === 0) {
+                alert('Aucune donnée chargée');
+                return;
+            }
+            
+            const results = searchData(searchValue);
+            displayResults(results, searchValue);
+        }
+        
+        function showAllData() {
+            if (sheetData.length === 0) {
+                alert('Aucune donnée chargée');
+                return;
+            }
+            
+            currentSearchTerm = '';
+            currentDateIndex = -1;
+            displayResults(sheetData, 'Toutes les données financières');
+        }
+        
+        function searchData(searchValue) {
+            const searchLower = searchValue.toLowerCase();
+            
+            return sheetData.filter(row => {
+                return row.some(cell => {
+                    const cellValue = String(cell).toLowerCase();
+                    return cellValue.includes(searchLower);
+                });
+            });
+        }
+
+        function cleanNumber(value) {
+            if (!value || value === '') return '0';
+            return String(value).replace(/[^\d,.-]/g, '').replace(',', '.');
+        }
+
+        function parseFinancialValue(value) {
+            const cleaned = cleanNumber(value);
+            const num = parseFloat(cleaned);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatNumberWithUnit(value, currency) {
+            if (value === 0) return '0';
+            const units = {
+                'Ariary': 'Ar',
+                'Euro': '€',
+                'Franc Suisse': 'CHF',
+                'Livre': '£',
+                'Banque Euro': '€'
+            };
+            return `${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`;
+        }
+
+        // ANCIENNE bulle des dons (récapitulatif)
+        function showDetailsDon(event) {
+            if (event && event.detail !== 2) {
+                return;
+            }
+            
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DONS';
+            
+            let html = '<h4 style="color: #e74c3c; margin-bottom: 10px;">RÉCAPITULATIF DONS REÇUS</h4>';
+            
+            if (detailsDonData.length === 0) {
+                html += '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                html += '<table>';
+                html += '<tr><th>Type de don</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDonData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item['Type']}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Euro'], 'Euro')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Livre'], 'Livre')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL DONS REÇUS</td>';
+                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+            }
+            
+            // Dons par localité (colonnes F, J, N, R, V) depuis GOOGLE_SHEETS_URL
+            if (donsParLocaliteData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>📍 DONS PAR LOCALITÉ</h4>';
+                html += '<table class="tiers-table">';
+                html += '<tr><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                
+                donsParLocaliteData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.localite}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanque += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            // Section des dons membres (en Ariary)
+            if (donsMembresData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>👥 DÉTAILS DONS PAR MEMBRE</h4>';
+                html += '<table class="tiers-table">';
+                html += '<tr><th>Membre</th><th>Promesse</th><th>Payé</th><th>Reste</th></tr>';
+                
+                let totalPromesse = 0, totalPaye = 0, totalReste = 0;
+                
+                donsMembresData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.membre}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.promesse, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.paye, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.reste, 'Ariary')}</td>`;
+                    html += '</tr>';
+                    
+                    totalPromesse += item.promesse;
+                    totalPaye += item.paye;
+                    totalReste += item.reste;
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalPromesse, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalPaye, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalReste, 'Ariary')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+
+        // VENTES - avec localité et toutes les devises
+        function showDetailsVentes(event) {
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS VENTES';
+            
+            if (detailsVentesData.length === 0) {
+                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                let html = '<table>';
+                html += '<tr><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                
+                detailsVentesData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.localite}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanque += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                content.innerHTML = html;
+            }
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+
+        // COLLECTES - avec localité et toutes les devises
+        function showDetailsCollectes(event) {
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS COLLECTES';
+            
+            if (detailsCollectesData.length === 0) {
+                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                let html = '<table>';
+                html += '<tr><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                
+                detailsCollectesData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.localite}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanque += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                content.innerHTML = html;
+            }
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+
+        // Fonction pour afficher les détails d'une catégorie de dépense
+        function showCategorieDepense(event, categorie) {
+            event.stopPropagation();
+            
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = `📋 DÉTAILS ${categorie.toUpperCase()}`;
+            
+            let html = '';
+            
+            if (!detailsDepensesParCategorie[categorie] || detailsDepensesParCategorie[categorie].length === 0) {
+                html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
+            } else {
+                html = '<table>';
+                html += '<tr><th>Libellé</th><th>Ariary Entrée</th><th>Ariary Sortie</th><th>Euro Entrée</th><th>Euro Sortie</th></tr>';
+                
+                let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0;
+                
+                detailsDepensesParCategorie[categorie].forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.libelle}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'], 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'], 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'], 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'], 'Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriaryEntree += item['Ariary Entrée'];
+                    totalAriarySortie += item['Ariary Sortie'];
+                    totalEuroEntree += item['Euro Entrée'];
+                    totalEuroSortie += item['Euro Sortie'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroEntree, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroSortie, 'Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                
+                const soldeAriary = totalAriaryEntree - totalAriarySortie;
+                const soldeEuro = totalEuroEntree - totalEuroSortie;
+                
+                html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
+                html += '<strong>SOLDE NET :</strong><br>';
+                html += `Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
+                html += `Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}`;
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+        
+        // Fonction pour afficher la bulle des dépenses
+        function showDetailsDepenses(event) {
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DÉPENSES';
+            
+            if (detailsDepensesData.length === 0) {
+                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                let html = '<table>';
+                html += '<tr><th>Dépenses</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDepensesData.forEach(item => {
+                    html += `<tr class="detail-item" onclick="showCategorieDepense(event, '${item['Depenses']}')" title="Cliquez pour voir les détails">`;
+                    html += `<td>${item['Depenses']}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Euro'], 'Euro')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Livre'], 'Livre')}</td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL DÉPENSES</td>';
+                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+                
+                html += '<p style="text-align:center; margin-top:10px; font-style:italic; color:#7f8c8d;">Cliquez sur une catégorie pour voir le détail</p>';
+                content.innerHTML = html;
+            }
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+
+        // Fonction pour afficher une bulle générique (Emprunt, Prêt, Transfert, Change)
+        function showDetailsBulle(event, title, data) {
+            if (event && event.detail !== 2) {
+                return;
+            }
+            
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = `📋 DÉTAILS ${title.toUpperCase()}`;
+            
+            let html = '';
+            
+            html += '<h4 style="color: #e74c3c; margin-bottom: 10px;">RÉCAPITULATIF GÉNÉRAL</h4>';
+            html += '<table>';
+            html += '<tr><th>Opération</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+            
+            let libelleMontant = '';
+            if (title === 'Emprunt') libelleMontant = 'Emprunt reçu (total)';
+            else if (title === 'Prêt') libelleMontant = 'Prêt accordé (total)';
+            else if (title === 'Transfert') libelleMontant = 'Transfert reçu (total)';
+            else if (title === 'Change') libelleMontant = 'Change reçu (total)';
+            
+            html += '<tr>';
+            html += `<td>${libelleMontant}</td>`;
+            
+            if (data && data.montant) {
+                html += `<td>${formatNumberWithUnit(data.montant.Ariary || 0, 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.montant.Euro || 0, 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.montant['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+            } else {
+                html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+            }
+            html += '</tr>';
+            
+            html += '<tr>';
+            html += `<td>Remboursement ${title}</td>`;
+            
+            if (data && data.remboursement) {
+                html += `<td>${formatNumberWithUnit(data.remboursement.Ariary || 0, 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.remboursement.Euro || 0, 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.remboursement['Franc Suisse'] || 0, 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+            } else {
+                html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+            }
+            html += '</tr>';
+            
+            const soldeAriary = (data?.montant?.Ariary || 0) - (data?.remboursement?.Ariary || 0);
+            const soldeEuro = (data?.montant?.Euro || 0) - (data?.remboursement?.Euro || 0);
+            const soldeFrancSuisse = (data?.montant?.['Franc Suisse'] || 0) - (data?.remboursement?.['Franc Suisse'] || 0);
+            const soldeLivre = (data?.montant?.Livre || 0) - (data?.remboursement?.Livre || 0);
+            const soldeBanqueEuro = (data?.montant?.['Banque Euro'] || 0) - (data?.remboursement?.['Banque Euro'] || 0);
+            
+            html += '<tr class="total-row">';
+            html += '<td>SOLDE</td>';
+            html += `<td>${formatNumberWithUnit(soldeAriary, 'Ariary')}</td>`;
+            html += `<td>${formatNumberWithUnit(soldeEuro, 'Euro')}</td>`;
+            html += `<td>${formatNumberWithUnit(soldeFrancSuisse, 'Franc Suisse')}</td>`;
+            html += `<td>${formatNumberWithUnit(soldeLivre, 'Livre')}</td>`;
+            html += `<td>${formatNumberWithUnit(soldeBanqueEuro, 'Banque Euro')}</td>`;
+            html += '</tr>';
+            html += '</table>';
+            
+            if (title === 'Emprunt' && detailsEmpruntTiersData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>👥 LISTE DES PERSONNES QUI NOUS ONT PRÊTÉ DE L\'ARGENT</h4>';
+                html += '<table class="tiers-table">';
+                html += '<tr><th>Nom du tiers</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0;
+                
+                detailsEmpruntTiersData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.tiers}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalFrancSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanqueEuro += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            if (title === 'Prêt' && detailsPretTiersData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>👥 LISTE DES PERSONNES QUI ONT EMPRUNTÉ DE L\'ARGENT</h4>';
+                html += '<table class="tiers-table">';
+                html += '<tr><th>Nom du tiers</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></tr>';
+                
+                let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0;
+                
+                detailsPretTiersData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.tiers}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalFrancSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanqueEuro += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
+        
+        function hideDetailsBulle() {
+            document.getElementById('detailsBulle').style.display = 'none';
+            document.getElementById('detailsOverlay').style.display = 'none';
+        }
+
+        function displayGlobalStats() {
+            const statsSection = document.getElementById('globalStats');
+            
+            if (sheetData.length === 0) {
+                statsSection.innerHTML = '<p>Aucune donnée disponible</p>';
+                return;
+            }
+
+            const columnMapping = {
+                'Ariary': {
+                    'Ventes': 3,
+                    'Collecte': 4,
+                    'Don': 5,
+                    'Depenses': 6
+                },
+                'Euro': {
+                    'Ventes': 7,
+                    'Collecte': 8,
+                    'Don': 9,
+                    'Depenses': 10
+                },
+                'Franc Suisse': {
+                    'Ventes': 11,
+                    'Collecte': 12,
+                    'Don': 13,
+                    'Depenses': 14
+                },
+                'Livre': {
+                    'Ventes': 15,
+                    'Collecte': 16,
+                    'Don': 17,
+                    'Depenses': 18
+                },
+                'Banque Euro': {
+                    'Ventes': 19,
+                    'Collecte': 20,
+                    'Don': 21,
+                    'Depenses': 22
+                }
+            };
+
+            const globalTotals = {};
+            Object.keys(columnMapping).forEach(currency => {
+                globalTotals[currency] = {
+                    'Ventes': 0,
+                    'Collecte': 0,
+                    'Don': 0,
+                    'Depenses': 0
+                };
+            });
+
+            sheetData.forEach(row => {
+                Object.keys(columnMapping).forEach(currency => {
+                    const cols = columnMapping[currency];
+                    globalTotals[currency]['Ventes'] += parseFinancialValue(row[cols['Ventes']] || '0');
+                    globalTotals[currency]['Collecte'] += parseFinancialValue(row[cols['Collecte']] || '0');
+                    globalTotals[currency]['Don'] += parseFinancialValue(row[cols['Don']] || '0');
+                    globalTotals[currency]['Depenses'] += parseFinancialValue(row[cols['Depenses']] || '0');
+                });
+            });
+
+            const fondsPropres = {};
+            Object.keys(columnMapping).forEach(currency => {
+                const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
+                const depenses = globalTotals[currency]['Depenses'];
+                fondsPropres[currency] = recettes - depenses;
+            });
+
+            let html = '<table class="financial-table">';
+            
+            html += '<tr><th class="category">Catégorie</th>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<th>${currency}</th>`;
+            });
+            html += '</tr>';
+            
+            const categories = ['Ventes', 'Collecte', 'Don', 'Depenses'];
+            categories.forEach(category => {
+                let rowClass = '';
+                let clickHandler = '';
+                
+                if (category === 'Depenses') {
+                    rowClass = 'depenses-row';
+                    clickHandler = 'onclick="showDetailsDepenses(event)"';
+                } else if (category === 'Don') {
+                    rowClass = 'don-row';
+                    clickHandler = 'ondblclick="showDetailsDon(event)"';
+                } else if (category === 'Ventes') {
+                    rowClass = 'ventes-row';
+                    clickHandler = 'onclick="showDetailsVentes(event)"';
+                } else if (category === 'Collecte') {
+                    rowClass = 'collecte-row';
+                    clickHandler = 'onclick="showDetailsCollectes(event)"';
+                }
+                
+                html += `<tr class="${rowClass}" ${clickHandler}><td class="category">${category}</td>`;
+                Object.keys(columnMapping).forEach(currency => {
+                    const value = globalTotals[currency][category];
+                    html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
+                html += `<td>${formatNumberWithUnit(recettes, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                const depenses = globalTotals[currency]['Depenses'];
+                html += `<td>${formatNumberWithUnit(depenses, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(fondsPropres[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES</td></tr>';
+            
+            html += `<tr class="emprunt-row" ondblclick="showDetailsBulle(event, 'Emprunt', detailsEmpruntData)"><td class="category">Emprunt</td>`;
+            Object.keys(columnMapping).forEach(currency => {
+                const value = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+                html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += `<tr class="pret-row" ondblclick="showDetailsBulle(event, 'Prêt', detailsPretData)"><td class="category">Prêt</td>`;
+            Object.keys(columnMapping).forEach(currency => {
+                const value = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
+                html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += `<tr class="transfert-row" ondblclick="showDetailsBulle(event, 'Transfert', detailsTransfertData)"><td class="category">Transfert</td>`;
+            Object.keys(columnMapping).forEach(currency => {
+                const value = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+                html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += `<tr class="change-row" ondblclick="showDetailsBulle(event, 'Change', detailsChangeData)"><td class="category">Change</td>`;
+            Object.keys(columnMapping).forEach(currency => {
+                const value = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
+                html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+                const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
+                const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+                const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
+                
+                const enMain = emprunt + pret + transfert + change;
+                html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '</table>';
+            
+            statsSection.innerHTML = html;
+        }
+        
+        function formatFinancialData(row) {
+            const columnMapping = {
+                'Ariary': {
+                    'Ventes': 3,
+                    'Collecte': 4,
+                    'Don': 5,
+                    'Depenses': 6
+                },
+                'Euro': {
+                    'Ventes': 7,
+                    'Collecte': 8,
+                    'Don': 9,
+                    'Depenses': 10
+                },
+                'Franc Suisse': {
+                    'Ventes': 11,
+                    'Collecte': 12,
+                    'Don': 13,
+                    'Depenses': 14
+                },
+                'Livre': {
+                    'Ventes': 15,
+                    'Collecte': 16,
+                    'Don': 17,
+                    'Depenses': 18
+                },
+                'Banque Euro': {
+                    'Ventes': 19,
+                    'Collecte': 20,
+                    'Don': 21,
+                    'Depenses': 22
+                }
+            };
+
+            const totals = {};
+            Object.keys(columnMapping).forEach(currency => {
+                const cols = columnMapping[currency];
+                const ventes = parseFinancialValue(row[cols['Ventes']] || '0');
+                const collecte = parseFinancialValue(row[cols['Collecte']] || '0');
+                const don = parseFinancialValue(row[cols['Don']] || '0');
+                const depenses = parseFinancialValue(row[cols['Depenses']] || '0');
+                totals[currency] = {
+                    'Ventes': ventes,
+                    'Collecte': collecte,
+                    'Don': don,
+                    'Depenses': depenses,
+                    'Recettes': ventes + collecte + don,
+                    'FondsPropres': ventes + collecte + don - depenses
+                };
+            });
+            
+            const empruntLocal = {
+                'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.ariary] || '0'),
+                'Euro': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.euro] || '0'),
+                'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.francSuisse] || '0'),
+                'Livre': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.livre] || '0'),
+                'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.emprunt.banqueEuro] || '0')
+            };
+
+            const pretLocal = {
+                'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.pret.ariary] || '0'),
+                'Euro': parseFinancialValue(row[LOCAL_COLUMNS.pret.euro] || '0'),
+                'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.pret.francSuisse] || '0'),
+                'Livre': parseFinancialValue(row[LOCAL_COLUMNS.pret.livre] || '0'),
+                'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.pret.banqueEuro] || '0')
+            };
+
+            const transfertLocal = {
+                'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.transfert.ariary] || '0'),
+                'Euro': parseFinancialValue(row[LOCAL_COLUMNS.transfert.euro] || '0'),
+                'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.transfert.francSuisse] || '0'),
+                'Livre': parseFinancialValue(row[LOCAL_COLUMNS.transfert.livre] || '0'),
+                'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.transfert.banqueEuro] || '0')
+            };
+
+            const changeLocal = {
+                'Ariary': parseFinancialValue(row[LOCAL_COLUMNS.change.ariary] || '0'),
+                'Euro': parseFinancialValue(row[LOCAL_COLUMNS.change.euro] || '0'),
+                'Franc Suisse': parseFinancialValue(row[LOCAL_COLUMNS.change.francSuisse] || '0'),
+                'Livre': parseFinancialValue(row[LOCAL_COLUMNS.change.livre] || '0'),
+                'Banque Euro': parseFinancialValue(row[LOCAL_COLUMNS.change.banqueEuro] || '0')
+            };
+
+            let html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+            html += '<div class="financial-table-container">';
+            html += '<table class="financial-table">';
+            
+            html += '<tr><th class="category">Catégorie</th>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<th>${currency}</th>`;
+            });
+            html += '</tr>';
+            
+            const categories = ['Ventes', 'Collecte', 'Don', 'Depenses'];
+            categories.forEach(category => {
+                html += `<tr><td class="category">${category}</td>`;
+                Object.keys(columnMapping).forEach(currency => {
+                    const value = totals[currency][category];
+                    html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['Depenses'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">OPÉRATIONS DU JOUR</td></tr>';
+            
+            html += '<tr><td class="category">Emprunt (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(empruntLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr><td class="category">Prêt (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(pretLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr><td class="category">Transfert (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(transfertLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+            
+            html += '<tr><td class="category">Change (jour)</td>';
+            Object.keys(columnMapping).forEach(currency => {
+                html += `<td>${formatNumberWithUnit(changeLocal[currency], currency)}</td>`;
+            });
+            html += '</tr>';
+
+            html += '</table>';
+            html += '</div>';
+            
+            return html;
+        }
+        
+        function displayResults(results, searchTerm) {
+            const resultsSection = document.getElementById('resultsSection');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('resultTitle');
+            
+            updateNavigationButtons();
+            
+            if (results.length === 0) {
+                resultContent.innerHTML = `
+                    <div class="no-results">
+                        <h3>❌ Aucune donnée trouvée</h3>
+                        <p>Aucune donnée financière ne correspond à votre recherche "${searchTerm}"</p>
+                    </div>
+                `;
+            } else {
+                let html = `
+                    <div class="search-stats">
+                        <strong>${results.length} ligne(s) de données trouvée(s)</strong> pour : "${searchTerm}"
+                    </div>
+                `;
+                
+                results.forEach((row) => {
+                    const dateStr = row[0] || 'Date non spécifiée';
+                    const localite = row[1] || '';
+                    const pays = row[2] || '';
+                    
+                    html += `
+                        <div class="pv-item">
+                            <div class="pv-header">
+                                <h2>💰 Données Financières</h2>
+                                <h3 class="pv-title">
+                                    ${formatDateForDisplay(parseDate(dateStr))}
+                                </h3>
+                            </div>
+                            <div style="padding: 20px;">
+                    `;
+                    
+                    if (localite || pays) {
+                        html += `
+                            <div class="location-info">
+                                <strong>📍 Localisation :</strong> 
+                                ${localite ? `<span class="localite">${localite}</span>` : ''}
+                                ${pays ? ` - <span class="pays">${pays}</span>` : ''}
+                            </div>
+                        `;
+                    }
+                    
+                    html += formatFinancialData(row);
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultContent.innerHTML = html;
+            }
+            
+            resultTitle.textContent = `Résultats pour "${searchTerm}"`;
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function closeResults() {
+            document.getElementById('resultsSection').style.display = 'none';
+            currentSearchTerm = '';
+        }
+
+        function showError(message) {
+            const searchSection = document.querySelector('.search-section');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = message;
+            searchSection.appendChild(errorDiv);
+        }
+
+        function clearErrorMessages() {
+            const errorMessages = document.querySelectorAll('.error-message');
+            errorMessages.forEach(msg => msg.remove());
+        }
+        
+        function showCountrySummary(pays) {
+            console.log(`Affichage du récapitulatif pour ${pays}`);
+            
+            const countryData = sheetData.filter(row => {
+                const rowPays = row[2] || '';
+                return rowPays.toUpperCase() === pays.toUpperCase();
+            });
+            
+            if (countryData.length === 0) {
+                alert(`Aucune donnée trouvée pour ${pays}`);
+                return;
+            }
+            
+            let mainCurrency = 'Euro';
+            let mainCurrencyLabel = 'Euro';
+            
+            if (pays.toUpperCase() === 'SUISSE') {
+                mainCurrency = 'Franc Suisse';
+                mainCurrencyLabel = 'Franc Suisse';
+            } else if (pays.toUpperCase() === 'ANGLETERRE' || pays.toUpperCase() === 'WALES') {
+                mainCurrency = 'Livre';
+                mainCurrencyLabel = 'Livre Sterling';
+            }
+            
+            const showEuroColumn = !['FRANCE', 'ALLEMAGNE', 'BELGIQUE'].includes(pays.toUpperCase());
+            
+            const columnMapping = {
+                'Ariary': {
+                    'Ventes': 3,
+                    'Collecte': 4,
+                    'Don': 5,
+                    'Depenses': 6
+                },
+                'Euro': {
+                    'Ventes': 7,
+                    'Collecte': 8,
+                    'Don': 9,
+                    'Depenses': 10
+                },
+                'Franc Suisse': {
+                    'Ventes': 11,
+                    'Collecte': 12,
+                    'Don': 13,
+                    'Depenses': 14
+                },
+                'Livre': {
+                    'Ventes': 15,
+                    'Collecte': 16,
+                    'Don': 17,
+                    'Depenses': 18
+                },
+                'Banque Euro': {
+                    'Ventes': 19,
+                    'Collecte': 20,
+                    'Don': 21,
+                    'Depenses': 22
+                }
+            };
+            
+            let html = `
+                <div class="search-stats">
+                    <strong>${countryData.length} date(s) trouvée(s)</strong> pour : ${pays}
+                </div>
+                <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
+                <div class="table-scroll-container">
+                    <table class="country-summary-table">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Date</th>
+                                <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
+            `;
+            
+            if (showEuroColumn) {
+                html += `<th colspan="4" class="currency-header">Euro</th>`;
+            }
+            
+            html += `
+                                <th colspan="4" class="currency-header">Banque Euro</th>
+                            </tr>
+                            <tr class="sub-header">
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+            `;
+            
+            if (showEuroColumn) {
+                html += `
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+                `;
+            }
+            
+            html += `
+                                <th>Ventes</th>
+                                <th>Collecte</th>
+                                <th>Don</th>
+                                <th>Dépenses</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            let totalMainVentes = 0, totalMainCollecte = 0, totalMainDon = 0, totalMainDepenses = 0;
+            let totalEuroVentes = 0, totalEuroCollecte = 0, totalEuroDon = 0, totalEuroDepenses = 0;
+            let totalBanqueVentes = 0, totalBanqueCollecte = 0, totalBanqueDon = 0, totalBanqueDepenses = 0;
+            
+            countryData.forEach(row => {
+                const dateStr = row[0] || '';
+                
+                const mainVentes = parseFinancialValue(row[columnMapping[mainCurrency]['Ventes']] || '0');
+                const mainCollecte = parseFinancialValue(row[columnMapping[mainCurrency]['Collecte']] || '0');
+                const mainDon = parseFinancialValue(row[columnMapping[mainCurrency]['Don']] || '0');
+                const mainDepenses = parseFinancialValue(row[columnMapping[mainCurrency]['Depenses']] || '0');
+                
+                const euroVentes = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Ventes']] || '0') : 0;
+                const euroCollecte = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Collecte']] || '0') : 0;
+                const euroDon = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Don']] || '0') : 0;
+                const euroDepenses = showEuroColumn ? parseFinancialValue(row[columnMapping['Euro']['Depenses']] || '0') : 0;
+                
+                const banqueVentes = parseFinancialValue(row[columnMapping['Banque Euro']['Ventes']] || '0');
+                const banqueCollecte = parseFinancialValue(row[columnMapping['Banque Euro']['Collecte']] || '0');
+                const banqueDon = parseFinancialValue(row[columnMapping['Banque Euro']['Don']] || '0');
+                const banqueDepenses = parseFinancialValue(row[columnMapping['Banque Euro']['Depenses']] || '0');
+                
+                totalMainVentes += mainVentes;
+                totalMainCollecte += mainCollecte;
+                totalMainDon += mainDon;
+                totalMainDepenses += mainDepenses;
+                
+                if (showEuroColumn) {
+                    totalEuroVentes += euroVentes;
+                    totalEuroCollecte += euroCollecte;
+                    totalEuroDon += euroDon;
+                    totalEuroDepenses += euroDepenses;
+                }
+                
+                totalBanqueVentes += banqueVentes;
+                totalBanqueCollecte += banqueCollecte;
+                totalBanqueDon += banqueDon;
+                totalBanqueDepenses += banqueDepenses;
+                
+                html += `
+                    <tr>
+                        <td class="date-cell">${dateStr}</td>
+                        <td>${formatNumberWithUnit(mainVentes, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainCollecte, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainDon, mainCurrency)}</td>
+                        <td>${formatNumberWithUnit(mainDepenses, mainCurrency)}</td>
+                `;
+                
+                if (showEuroColumn) {
+                    html += `
+                        <td>${formatNumberWithUnit(euroVentes, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroCollecte, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroDon, 'Euro')}</td>
+                        <td>${formatNumberWithUnit(euroDepenses, 'Euro')}</td>
+                    `;
+                }
+                
+                html += `
+                        <td>${formatNumberWithUnit(banqueVentes, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueCollecte, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueDon, 'Banque Euro')}</td>
+                        <td>${formatNumberWithUnit(banqueDepenses, 'Banque Euro')}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                <tr class="total-row">
+                    <td class="date-cell">TOTAL</td>
+                    <td>${formatNumberWithUnit(totalMainVentes, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainCollecte, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainDon, mainCurrency)}</td>
+                    <td>${formatNumberWithUnit(totalMainDepenses, mainCurrency)}</td>
+            `;
+            
+            if (showEuroColumn) {
+                html += `
+                    <td>${formatNumberWithUnit(totalEuroVentes, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroCollecte, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroDon, 'Euro')}</td>
+                    <td>${formatNumberWithUnit(totalEuroDepenses, 'Euro')}</td>
+                `;
+            }
+            
+            html += `
+                    <td>${formatNumberWithUnit(totalBanqueVentes, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueCollecte, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueDon, 'Banque Euro')}</td>
+                    <td>${formatNumberWithUnit(totalBanqueDepenses, 'Banque Euro')}</td>
+                </tr>
+            `;
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            const resultsSection = document.getElementById('resultsSection');
+            const resultContent = document.getElementById('resultContent');
+            const resultTitle = document.getElementById('resultTitle');
+            
+            resultContent.innerHTML = html;
+            resultTitle.textContent = `Récapitulatif financier pour ${pays}`;
+            resultsSection.style.display = 'block';
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Fonction PDF complète (simplifiée pour éviter les erreurs)
+        async function generatePDF() {
+            alert('La génération du PDF sera disponible dans la prochaine version.');
+        }
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💶</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Bibliothèques pour PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <title>FINANCE TOURNÉE 2026</title>
+    <style>
+        /* Styles identiques au précédent - garder le même CSS */
+        :root {
+            --primary-color: #2980b9;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --text-color: #2c3e50;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --background-color: #f0f2f5;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 50px 20px 40px;
+            background: linear-gradient(135deg, #1a2a6c 0%, #2c3e50 50%, #4a235a 100%);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #3498db;
+        }
+        
+        .currency-decoration {
+            position: absolute;
+            font-size: 2.5em;
+            z-index: 1;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        .currency-decoration.ariary {
+            top: 20px;
+            left: 20px;
+            animation-delay: 0s;
+        }
+        
+        .currency-decoration.euro {
+            top: 20px;
+            right: 20px;
+            animation-delay: 1s;
+        }
+        
+        .currency-decoration.franc {
+            bottom: 20px;
+            left: 20px;
+            animation-delay: 2s;
+        }
+        
+        .currency-decoration.livre {
+            bottom: 20px;
+            right: 20px;
+            animation-delay: 3s;
+        }
+        
+        .currency-decoration.banque {
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            animation-delay: 4s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(5deg); }
+        }
+        
+        .currency-badges {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .currency-badge {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 2;
+        }
+        
+        h1 {
+            color: white;
+            margin-bottom: 15px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        header p {
+            color: #ecf0f1;
+            font-size: 1.2em;
+            font-weight: 500;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .stats-section {
+            background: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+        
+        .stats-section h2 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .search-section {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+        }
+        
+        .search-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+        
+        .calendar-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            padding: 15px;
+        }
+        
+        .calendar {
+            min-width: 600px;
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 15px;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            min-width: 600px;
+        }
+        
+        .calendar-day-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 8px;
+            background-color: var(--light-color);
+            border-radius: 4px;
+            min-width: 70px;
+        }
+        
+        .calendar-day {
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            position: relative;
+            min-height: 80px;
+            min-width: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .calendar-day:hover {
+            background-color: var(--light-color);
+        }
+        
+        .calendar-day.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .calendar-day.has-data {
+            font-weight: bold;
+        }
+        
+        .calendar-day.other-month {
+            color: #ccc;
+        }
+        
+        .date-info {
+            font-size: 0.7em;
+            line-height: 1.2;
+        }
+        
+        .localite {
+            color: #2980b9;
+            font-weight: bold;
+        }
+        
+        .pays {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        
+        .navigation-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .nav-button {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            justify-content: center;
+        }
+        
+        .nav-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .nav-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        .nav-button.prev {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .nav-button.next {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+        
+        .date-indicator {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 15px 0;
+            padding: 10px;
+            background: #e8f4fd;
+            border-radius: var(--border-radius);
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        
+        input, select, button {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            width: 100%;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            min-width: 150px;
+        }
+        
+        button:hover {
+            background-color: #1f6391;
+        }
+        
+        button.secondary {
+            background-color: #7f8c8d;
+        }
+        
+        button.secondary:hover {
+            background-color: #6c7a7d;
+        }
+        
+        .pdf-button {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px auto;
+            opacity: 0.7;
+            position: relative;
+        }
+        
+        .pdf-button.locked {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            cursor: not-allowed;
+        }
+        
+        .pdf-button.locked:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .pdf-button.locked::after {
+            content: "🔒";
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 12px;
+        }
+        
+        .pdf-button.unlocked {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            opacity: 1;
+            cursor: pointer;
+        }
+        
+        .pdf-button.unlocked:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+        }
+        
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .modal-content h3 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+        }
+        
+        .password-input {
+            margin: 20px 0;
+        }
+        
+        .password-input input {
+            text-align: center;
+            letter-spacing: 2px;
+            font-family: monospace;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .modal-buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .error-message-password {
+            color: #e74c3c;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        
+        .financial-table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .financial-table {
+            width: auto;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .financial-table th {
+            background: var(--light-color);
+            color: var(--primary-color);
+            font-weight: bold;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+        
+        .financial-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        .financial-table .category {
+            background: #f8f9fa;
+            font-weight: bold;
+            text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 1;
+        }
+        
+        .financial-table .recettes-row {
+            background: #d4edda;
+            font-weight: bold;
+        }
+        
+        .financial-table .depenses-row {
+            background: #f8d7da;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .financial-table .depenses-row:hover {
+            background-color: #f5b7b1;
+        }
+        
+        .financial-table .don-row {
+            background: #fff3cd;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .financial-table .don-row:hover {
+            background-color: #ffe69c;
+        }
+        
+        .financial-table .ventes-row {
+            background: #d4e6f1;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .financial-table .ventes-row:hover {
+            background-color: #a9cce3;
+        }
+        
+        .financial-table .collecte-row {
+            background: #d5f5e3;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .financial-table .collecte-row:hover {
+            background-color: #abebc6;
+        }
+        
+        .financial-table .fonds-propre-row {
+            background: #fff3cd;
+            font-weight: bold;
+        }
+        
+        .financial-table .fonds-propre-row td {
+            font-weight: 900 !important;
+            color: #e67e22 !important;
+            font-size: 1.1em;
+        }
+        
+        .financial-table .autres-header {
+            background: #ffeaa7;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .financial-table .ressource-row {
+            background: #e8f0fe;
+        }
+        
+        .financial-table .depense-row {
+            background: #ffe6f0;
+        }
+        
+        .financial-table .emprunt-row {
+            background: #e8f0fe;
+            cursor: pointer;
+        }
+        
+        .financial-table .pret-row {
+            background: #f0e6ff;
+            cursor: pointer;
+        }
+        
+        .financial-table .transfert-row {
+            background: #ffe6f0;
+            cursor: pointer;
+        }
+        
+        .financial-table .change-row {
+            background: #fff0e6;
+            cursor: pointer;
+        }
+        
+        .financial-table .emprunt-row:hover,
+        .financial-table .pret-row:hover,
+        .financial-table .transfert-row:hover,
+        .financial-table .change-row:hover {
+            filter: brightness(0.95);
+        }
+        
+        .financial-table .en-main-row {
+            background: #b2f0e6;
+            font-weight: bold;
+            border-top: 3px solid #00b894;
+            border-bottom: 3px solid #00b894;
+        }
+        
+        .financial-table .en-main-row td {
+            font-weight: 900;
+        }
+        
+        .details-bulle {
+            position: fixed;
+            background: white;
+            border: 2px solid #e74c3c;
+            border-radius: var(--border-radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            padding: 20px;
+            z-index: 2000;
+            min-width: 400px;
+            max-width: 90vw;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .details-bulle h3 {
+            color: #e74c3c;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e74c3c;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .details-bulle .close-bulle {
+            cursor: pointer;
+            font-size: 20px;
+            color: #7f8c8d;
+        }
+        
+        .details-bulle .close-bulle:hover {
+            color: #e74c3c;
+        }
+        
+        .details-bulle table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        
+        .details-bulle th {
+            background: #e74c3c;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .details-bulle td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: right;
+        }
+        
+        .details-bulle td:first-child {
+            text-align: left;
+            font-weight: bold;
+            background: #f8f9fa;
+        }
+        
+        .details-bulle .total-row {
+            background: #d1ecf1;
+            font-weight: bold;
+        }
+        
+        .details-bulle-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1999;
+            display: none;
+        }
+        
+        .results-section {
+            display: none;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            overflow: hidden;
+            margin-top: 30px;
+        }
+        
+        .result-header {
+            background-color: var(--secondary-color);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .result-content {
+            padding: 20px;
+        }
+        
+        .pv-item {
+            margin-bottom: 40px;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+        
+        .pv-header {
+            background: linear-gradient(135deg, #e8f5e8 0%, #d4edda 50%, #c8e6c9 100%);
+            color: #2e7d32;
+            padding: 25px;
+            border-bottom: 3px solid #4CAF50;
+        }
+        
+        .pv-title {
+            color: #2e7d32;
+            font-weight: bold;
+            margin-top: 0;
+            font-size: 1.6em;
+        }
+        
+        .location-info {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            border-left: 4px solid #2980b9;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        .error-message {
+            background-color: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .retry-options {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin: 10px 0;
+            border-left: 4px solid #ffc107;
+            display: none;
+        }
+        
+        .retry-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .retry-buttons button {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .country-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        
+        .country-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            flex: 1;
+            min-width: 150px;
+            max-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .country-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .country-button.suisse {
+            background-color: #e74c3c;
+        }
+        
+        .country-button.france {
+            background-color: #2980b9;
+        }
+        
+        .country-button.allemagne {
+            background-color: #2c3e50;
+        }
+        
+        .country-button.belgique {
+            background-color: #f39c12;
+        }
+        
+        .country-button.wales {
+            background-color: #27ae60;
+        }
+        
+        .country-button.angleterre {
+            background-color: #9b59b6;
+        }
+        
+        .button-group {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border: 1px solid #e1e1e1;
+            border-radius: var(--border-radius);
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .country-summary-table {
+            width: auto;
+            min-width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .country-summary-table th {
+            background: #2c3e50;
+            color: white;
+            font-weight: bold;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+        }
+        
+        .country-summary-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: right;
+            white-space: nowrap;
+        }
+        
+        .country-summary-table .date-cell {
+            text-align: left;
+            font-weight: bold;
+            position: sticky;
+            left: 0;
+            background: #f8f9fa;
+            z-index: 1;
+        }
+        
+        .country-summary-table .total-row {
+            background: #d1ecf1;
+            font-weight: bold;
+        }
+        
+        .country-summary-table .currency-column {
+            background: #f8f9fa;
+        }
+        
+        .country-summary-table .currency-header {
+            background: #3498db;
+            color: white;
+            font-size: 1.1em;
+        }
+        
+        .country-summary-table .sub-header {
+            background: #2980b9;
+            color: white;
+        }
+        
+        .scroll-hint {
+            text-align: center;
+            color: #7f8c8d;
+            font-size: 14px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .scroll-hint::after {
+            content: "← →";
+            display: block;
+            font-weight: bold;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+        
+        .tiers-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        
+        .tiers-table th {
+            background: #2980b9;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .tiers-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .tiers-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        
+        .tiers-table .montant-cell {
+            text-align: right;
+            font-weight: bold;
+        }
+        
+        .tiers-section {
+            margin-top: 20px;
+            border-top: 2px solid #2980b9;
+            padding-top: 15px;
+        }
+        
+        .tiers-section h4 {
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+        
+        .pdf-loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .pdf-loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            max-width: 400px;
+        }
+        
+        .pdf-loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #e74c3c;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        .detail-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .detail-item:hover {
+            background-color: #ffe6f0 !important;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .financial-table {
+                font-size: 12px;
+            }
+            
+            .calendar-day {
+                min-height: 60px;
+                padding: 5px;
+                min-width: 60px;
+            }
+            
+            .calendar-day-header {
+                min-width: 60px;
+                padding: 6px;
+            }
+            
+            .calendar-grid {
+                min-width: 500px;
+                gap: 3px;
+            }
+            
+            .calendar {
+                min-width: 500px;
+                padding: 10px;
+            }
+            
+            .retry-buttons {
+                flex-direction: column;
+            }
+            
+            .country-buttons {
+                flex-direction: row;
+                align-items: center;
+            }
+            
+            .country-button {
+                max-width: calc(50% - 10px);
+                min-width: 140px;
+            }
+            
+            .pdf-button {
+                max-width: 100%;
+                min-width: 280px;
+            }
+            
+            .country-summary-table {
+                font-size: 12px;
+            }
+            
+            .country-summary-table th,
+            .country-summary-table td {
+                padding: 8px 6px;
+            }
+            
+            .scroll-hint {
+                display: block;
+            }
+            
+            .currency-decoration {
+                font-size: 1.8em;
+            }
+            
+            .currency-decoration.ariary {
+                top: 10px;
+                left: 10px;
+            }
+            
+            .currency-decoration.euro {
+                top: 10px;
+                right: 10px;
+            }
+            
+            .currency-decoration.franc {
+                bottom: 10px;
+                left: 10px;
+            }
+            
+            .currency-decoration.livre {
+                bottom: 10px;
+                right: 10px;
+            }
+            
+            .currency-decoration.banque {
+                left: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            header p {
+                font-size: 1em;
+            }
+            
+            .details-bulle {
+                min-width: 300px;
+                font-size: 12px;
+            }
+            
+            .navigation-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .nav-button {
+                min-width: 250px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .country-summary-table {
+                font-size: 11px;
+            }
+            
+            .country-summary-table th,
+            .country-summary-table td {
+                padding: 6px 4px;
+            }
+            
+            .currency-decoration {
+                font-size: 1.5em;
+            }
+            
+            h1 {
+                font-size: 1.7em;
+            }
+            
+            .calendar-grid {
+                min-width: 450px;
+            }
+            
+            .calendar {
+                min-width: 450px;
+            }
+            
+            .calendar-day {
+                min-width: 55px;
+                min-height: 55px;
+            }
+            
+            .calendar-day-header {
+                min-width: 55px;
+            }
+            
+            .country-button {
+                max-width: 100%;
+                min-width: 100%;
+            }
+            
+            .pdf-button {
+                min-width: 100%;
+            }
+            
+            .details-bulle {
+                min-width: 280px;
+                font-size: 11px;
+            }
+            
+            .nav-button {
+                min-width: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="currency-decoration ariary">🇲🇬</div>
+            <div class="currency-decoration euro">💶</div>
+            <div class="currency-decoration franc">🇨🇭</div>
+            <div class="currency-decoration livre">💷</div>
+            <div class="currency-decoration banque">🏦</div>
+            
+            <div class="header-content">
+                <h1>💰 RAPPORT FINANCIER TOURNÉE 2026</h1>
+                <p>Navigation par date et recherche dans les données financières</p>
+                
+                <div class="currency-badges">
+                    <div class="currency-badge">🇲🇬 Ariary</div>
+                    <div class="currency-badge">💶 Euro</div>
+                    <div class="currency-badge">🇨🇭 Franc Suisse</div>
+                    <div class="currency-badge">💷 Livre Sterling</div>
+                    <div class="currency-badge">🏦 Banque Euro</div>
+                </div>
+            </div>
+        </header>
+        
+        <section class="stats-section" id="statsSection">
+            <h2>📊 RECAPITULATIF GLOBAL</h2>
+            
+            <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
+            <div class="financial-table-container">
+                <div id="globalStats">
+                    <p>Chargement des données...</p>
+                </div>
+            </div>
+            
+            <!-- Bouton PDF uniquement -->
+            <div class="button-group">
+                <button class="pdf-button locked" id="pdfButton" onclick="handlePDFButton()">
+                    🔒 Exporter Rapport PDF Complet
+                </button>
+            </div>
+            
+            <h2 style="margin-top: 30px;">🌍 RÉCAPITULATIF PAR PAYS</h2>
+            <div class="country-buttons" id="countryButtons">
+                <button class="country-button suisse" data-pays="SUISSE">🇨🇭 SUISSE</button>
+                <button class="country-button france" data-pays="FRANCE">🇫🇷 FRANCE</button>
+                <button class="country-button allemagne" data-pays="ALLEMAGNE">🇩🇪 ALLEMAGNE</button>
+                <button class="country-button belgique" data-pays="BELGIQUE">🇧🇪 BELGIQUE</button>
+                <button class="country-button wales" data-pays="WALES">🏴󠁧󠁢󠁷󠁬󠁳󠁿 WALES</button>
+                <button class="country-button angleterre" data-pays="ANGLETERRE">🏴󠁧󠁢󠁥󠁮󠁧󠁿 ANGLETERRE</button>
+            </div>
+        </section>
+        
+        <section class="search-section">
+            <form id="searchForm" class="search-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="searchText">Rechercher un mot ou une phrase :</label>
+                    <input type="text" id="searchText" placeholder="Entrez votre recherche..." autocomplete="off">
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit">🔍 Rechercher</button>
+                </div>
+            </form>
+            
+            <div class="retry-options" id="retryOptions">
+                <h3>Problème de chargement ?</h3>
+                <p>Essayez une autre méthode de connexion :</p>
+                <div class="retry-buttons">
+                    <button id="tryDirect" style="background-color: #3498db;">Méthode Standard</button>
+                    <button id="tryProxy" style="background-color: #9b59b6;">Méthode Alternative 1</button>
+                    <button id="tryCors" style="background-color: #e67e22;">Méthode Alternative 2</button>
+                </div>
+            </div>
+            
+            <div class="calendar-scroll-container">
+                <div class="calendar">
+                    <div class="calendar-header">
+                        <button id="prevMonth" class="secondary">◀</button>
+                        <h3 id="currentMonth"></h3>
+                        <button id="nextMonth" class="secondary">▶</button>
+                    </div>
+                    <div class="calendar-grid" id="calendarGrid">
+                        <!-- Le calendrier sera généré ici -->
+                    </div>
+                </div>
+            </div>
+            
+            <button id="showAllButton" style="background-color: #27ae60; margin-top: 15px;">
+                📊 Afficher toutes les données financières
+            </button>
+        </section>
+        
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            <p>Chargement des données depuis Google Sheets...</p>
+        </div>
+
+        <section class="results-section" id="resultsSection">
+            <div class="result-header">
+                <h2 id="resultTitle">Résultats de la recherche</h2>
+                <button id="closeResults">✕ Fermer</button>
+            </div>
+            <div class="result-content" id="resultContent">
+                <!-- Les résultats seront affichées ici -->
+            </div>
+            <!-- Boutons de navigation -->
+            <div class="navigation-buttons" id="navigationButtons">
+                <button class="nav-button prev" id="prevDate" onclick="navigateDate('prev')" disabled>
+                    <i class="fas fa-arrow-left"></i> Date précédente
+                </button>
+                <div class="date-indicator" id="dateIndicator"></div>
+                <button class="nav-button next" id="nextDate" onclick="navigateDate('next')" disabled>
+                    Date suivante <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Overlay et bulle pour les détails -->
+    <div class="details-bulle-overlay" id="detailsOverlay" onclick="hideDetailsBulle()"></div>
+    <div class="details-bulle" id="detailsBulle">
+        <h3>
+            <span id="bulleTitle">DÉTAILS</span>
+            <span class="close-bulle" onclick="hideDetailsBulle()">✕</span>
+        </h3>
+        <div id="detailsBulleContent">
+            <!-- Le contenu sera généré dynamiquement -->
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="passwordModal">
+        <div class="modal-content">
+            <h3>🔒 Accès Protégé</h3>
+            <p>Veuillez entrer le mot de passe pour accéder à l'export PDF :</p>
+            
+            <div class="password-input">
+                <input type="password" id="passwordInput" placeholder="Mot de passe" autocomplete="off">
+            </div>
+            
+            <div class="error-message-password" id="passwordError">
+                ❌ Mot de passe incorrect. Veuillez réessayer.
+            </div>
+            
+            <div class="modal-buttons">
+                <button onclick="closePasswordModal()" class="secondary">Annuler</button>
+                <button onclick="checkPassword()" style="background-color: #27ae60;">Valider</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay de chargement PDF -->
+    <div class="pdf-loading" id="pdfLoading">
+        <div class="pdf-loading-content">
+            <div class="pdf-loading-spinner"></div>
+            <h3>Génération du rapport PDF en cours...</h3>
+            <p>Veuillez patienter pendant la création du document.</p>
+        </div>
+    </div>
+
+    <script>
+        // URLs
+        const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
+        const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
+        const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
+        const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
+        const CORRECT_PASSWORD = 'finadmin';
+        
+        let sheetData = [];
+        let headers = [];
+        let datesWithData = [];
+        let currentDate = new Date(2026, 3, 1);
+        let selectedDate = null;
+        let currentSearchTerm = '';
+        let isAuthenticated = false;
+        let currentDateIndex = -1;
+        let dataLoaded = false;
+        
+        // Données pour les "Autres ressources et depenses"
+        let autresSourcesData = {
+            'Emprunt': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 },
+            'Pret': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 },
+            'Transfert': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 },
+            'Change': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }
+        };
+        
+        // Données pour les détails dépenses (B2:G15)
+        let detailsDepensesData = [];
+        
+        // Données détaillées par catégorie de dépense
+        let detailsDepensesParCategorie = {};
+        
         // Données pour les détails dons (I3:N4) - récapitulatif
         let detailsDonData = [];
         
@@ -1754,22 +5344,23 @@
                     }
                     
                     // 2. Charger les détails don (I3:N4) - uniquement les entrées (reçus)
-                    detailsDonData = [];
-                    for (let i = 2; i < 4; i++) {
-                        if (i < lines.length) {
-                            const row = lines[i];
-                            if (row && row.length >= 14) {
-                                const titre = i === 2 ? 'Don Membre' : 'Don Divers';
-                                detailsDonData.push({
-                                    'Type': titre,
-                                    'Ariary': parseFloat(cleanNumber(row[8] || '0')),
-                                    'Euro': parseFloat(cleanNumber(row[9] || '0')),
-                                    'Franc Suisse': parseFloat(cleanNumber(row[10] || '0')),
-                                    'Livre': parseFloat(cleanNumber(row[11] || '0')),
-                                    'Banque Euro': parseFloat(cleanNumber(row[12] || '0'))
-                                });
-                            }
-                        }
+                    // 2. Charger les détails don (I3:N4) - récapitulatif
+detailsDonData = [];
+for (let i = 2; i < 4 && i < lines.length; i++) {
+    const row = lines[i];
+    if (row && row.length >= 14) {
+        const titre = i === 2 ? 'Don Membre' : 'Don Divers';
+        // Correction : Ariary à la colonne I (index 8)
+        detailsDonData.push({
+            'Type': titre,
+            'Ariary': parseFloat(cleanNumber(row[8] || '0')),  // Colonne I
+            'Euro': parseFloat(cleanNumber(row[9] || '0')),    // Colonne J
+            'Franc Suisse': parseFloat(cleanNumber(row[10] || '0')), // Colonne K
+            'Livre': parseFloat(cleanNumber(row[11] || '0')),  // Colonne L
+            'Banque Euro': parseFloat(cleanNumber(row[12] || '0')) // Colonne M
+        });
+    }
+}
                     }
                     
                     // 3. Charger les données des tiers pour EMPRUNT (I33:N...)
