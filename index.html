@@ -119,6 +119,25 @@
             color: var(--primary-color);
             margin-bottom: 20px;
             text-align: center;
+            cursor: pointer;
+            transition: color 0.3s;
+            position: relative;
+        }
+        
+        .stats-section h2:hover {
+            color: #e74c3c;
+        }
+        
+        .stats-section h2::after {
+            content: "📄";
+            font-size: 0.8em;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .stats-section h2:hover::after {
+            opacity: 1;
         }
         
         .search-section {
@@ -319,56 +338,6 @@
         
         button.secondary:hover {
             background-color: #6c7a7d;
-        }
-        
-        .pdf-button {
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: var(--border-radius);
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 16px;
-            transition: all 0.3s;
-            min-width: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin: 20px auto;
-            opacity: 0.7;
-            position: relative;
-        }
-        
-        .pdf-button.locked {
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-            cursor: not-allowed;
-        }
-        
-        .pdf-button.locked:hover {
-            transform: none;
-            box-shadow: none;
-        }
-        
-        .pdf-button.locked::after {
-            content: "🔒";
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            font-size: 12px;
-        }
-        
-        .pdf-button.unlocked {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            opacity: 1;
-            cursor: pointer;
-        }
-        
-        .pdf-button.unlocked:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-            background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
         }
         
         .modal-overlay {
@@ -713,7 +682,7 @@
         .loading {
             text-align: center;
             padding: 20px;
-            display: none;
+            display: block;
         }
         
         .spinner {
@@ -724,6 +693,10 @@
             height: 30px;
             animation: spin 1s linear infinite;
             margin: 0 auto 15px;
+        }
+        
+        .loading.loaded {
+            display: none !important;
         }
         
         .error-message {
@@ -1021,11 +994,6 @@
                 min-width: 140px;
             }
             
-            .pdf-button {
-                max-width: 100%;
-                min-width: 280px;
-            }
-            
             .country-summary-table {
                 font-size: 12px;
             }
@@ -1102,10 +1070,6 @@
                 min-width: 100%;
             }
             
-            .pdf-button {
-                min-width: 100%;
-            }
-            
             .details-bulle {
                 min-width: 280px;
                 font-size: 11px;
@@ -1132,20 +1096,13 @@
         </header>
         
         <section class="stats-section" id="statsSection">
-            <h2>📊 RECAPITULATIF GLOBAL</h2>
+            <h2 ondblclick="handlePDFButton()" title="Double-cliquez pour exporter le rapport PDF">📊 RECAPITULATIF GLOBAL</h2>
             
             <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>
             <div class="financial-table-container">
                 <div id="globalStats">
                     <p>Chargement des données...</p>
                 </div>
-            </div>
-            
-            <!-- Bouton PDF uniquement -->
-            <div class="button-group">
-                <button class="pdf-button locked" id="pdfButton" onclick="handlePDFButton()">
-                    🔒 Exporter Rapport PDF Complet
-                </button>
             </div>
             
             <h2 style="margin-top: 30px;">🌍 RÉCAPITULATIF PAR PAYS</h2>
@@ -1301,7 +1258,7 @@
         // Données pour les détails dons (I3:N4) - récapitulatif
         let detailsDonData = [];
         
-        // Données pour les dons membres (détail par membre)
+        // Données pour les dons membres (détail par membre) - Gardé pour l'affichage HTML mais exclu du PDF
         let donsMembresData = [];
         
         // Données pour les ventes (détails avec localité)
@@ -1362,9 +1319,6 @@
             // Charger les données
             loadDataFromGoogleSheets('direct');
             
-            // Initialiser le bouton PDF comme verrouillé
-            lockPDFButton();
-            
             // Vérifier l'authentification existante
             checkExistingAuthentication();
         });
@@ -1375,20 +1329,6 @@
             } else {
                 showPasswordModal();
             }
-        }
-
-        function lockPDFButton() {
-            const pdfButton = document.getElementById('pdfButton');
-            pdfButton.classList.add('locked');
-            pdfButton.classList.remove('unlocked');
-            pdfButton.innerHTML = '🔒 Exporter Rapport PDF Complet';
-        }
-
-        function unlockPDFButton() {
-            const pdfButton = document.getElementById('pdfButton');
-            pdfButton.classList.remove('locked');
-            pdfButton.classList.add('unlocked');
-            pdfButton.innerHTML = '📄 Exporter Rapport PDF Complet';
         }
 
         function showPasswordModal() {
@@ -1412,10 +1352,9 @@
             if (enteredPassword === CORRECT_PASSWORD) {
                 isAuthenticated = true;
                 closePasswordModal();
-                unlockPDFButton();
                 showTemporaryMessage('✅ Accès autorisé à l\'export PDF', 'success');
-                localStorage.setItem('finadmin_authenticated', 'true');
-                localStorage.setItem('finadmin_timestamp', Date.now().toString());
+                // Lancer immédiatement l'export PDF après authentification
+                generatePDF();
             } else {
                 passwordError.style.display = 'block';
                 passwordInput.value = '';
@@ -1438,7 +1377,6 @@
                 
                 if (hoursSinceAuth < 8) {
                     isAuthenticated = true;
-                    unlockPDFButton();
                 } else {
                     localStorage.removeItem('finadmin_authenticated');
                     localStorage.removeItem('finadmin_timestamp');
@@ -1744,7 +1682,7 @@
                         }
                     }
                     
-                    // 2. Charger les détails don (I3:N4) - récapitulatif
+                    // 2. Charger les détails don (I3:N4) - récapitulatif (CORRECTION DES COLONNES)
                     detailsDonData = [];
                     for (let i = 2; i < 4 && i < lines.length; i++) {
                         const row = lines[i];
@@ -1752,11 +1690,11 @@
                             const titre = i === 2 ? 'Don Membre' : 'Don Divers';
                             detailsDonData.push({
                                 'Type': titre,
-                                'Ariary': parseFloat(cleanNumber(row[9] || '0')),   // Colonne j
-                                'Euro': parseFloat(cleanNumber(row[10] || '0')),     // Colonne k
-                                'Franc Suisse': parseFloat(cleanNumber(row[11] || '0')), // Colonne l
-                                'Livre': parseFloat(cleanNumber(row[12] || '0')),   // Colonne m
-                                'Banque Euro': parseFloat(cleanNumber(row[13] || '0')) // Colonne n
+                                'Ariary': parseFloat(cleanNumber(row[9] || '0')),   // Colonne J (index 9)
+                                'Euro': parseFloat(cleanNumber(row[10] || '0')),     // Colonne K (index 10)
+                                'Franc Suisse': parseFloat(cleanNumber(row[11] || '0')), // Colonne L (index 11)
+                                'Livre': parseFloat(cleanNumber(row[12] || '0')),   // Colonne M (index 12)
+                                'Banque Euro': parseFloat(cleanNumber(row[13] || '0')) // Colonne N (index 13)
                             });
                         }
                     }
@@ -1936,6 +1874,8 @@
                     // Mettre à jour l'affichage
                     if (dataLoaded) {
                         displayGlobalStats();
+                        // Cacher l'indicateur de chargement
+                        document.getElementById('loadingIndicator').classList.add('loaded');
                     }
                 } else {
                     console.error('Erreur chargement autres sources:', response.status);
@@ -1971,6 +1911,8 @@
                     extractDatesWithData();
                     renderCalendar();
                     displayGlobalStats();
+                    // Cacher l'indicateur de chargement
+                    document.getElementById('loadingIndicator').classList.add('loaded');
                 });
                 
             } catch (error) {
@@ -1984,6 +1926,7 @@
         async function loadDataFromGoogleSheets(method = 'direct') {
             console.log(`🔍 Tentative de chargement avec méthode: ${method}`);
             document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('loadingIndicator').classList.remove('loaded');
             document.getElementById('retryOptions').style.display = 'none';
             clearErrorMessages();
             
@@ -2401,7 +2344,36 @@
         }
 
         function formatNumberWithUnit(value, currency) {
-            if (value === 0) return '0';
+            if (value === 0) return '0,00';
+            
+            // Format avec points pour les milliers et virgule pour les décimales (### ### ###,00)
+            // Pour l'Ariary, utiliser le format avec points
+            let formattedValue;
+            
+            if (currency === 'Ariary') {
+                // Format avec points comme séparateurs de milliers
+                formattedValue = value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                // Remplacer le dernier point par une virgule pour les décimales si nécessaire
+                if (formattedValue.includes('.')) {
+                    const parts = formattedValue.split('.');
+                    if (parts.length > 2) {
+                        // Si plusieurs points, c'est qu'on a des milliers, garder les points et remplacer le dernier par une virgule
+                        const lastDotIndex = formattedValue.lastIndexOf('.');
+                        formattedValue = formattedValue.substring(0, lastDotIndex) + ',' + formattedValue.substring(lastDotIndex + 1);
+                    } else {
+                        // Un seul point, c'est le séparateur décimal
+                        formattedValue = formattedValue.replace('.', ',');
+                    }
+                }
+            } else {
+                // Pour les autres devises, format français standard avec espaces
+                formattedValue = new Intl.NumberFormat('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                    useGrouping: true
+                }).format(value);
+            }
+            
             const units = {
                 'Ariary': 'Ar',
                 'Euro': '€',
@@ -2409,7 +2381,47 @@
                 'Livre': '£',
                 'Banque Euro': '€'
             };
-            return `${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`;
+            
+            return `${formattedValue} ${units[currency]}`;
+        }
+
+        // Fonction pour formater les nombres pour le PDF (sans symbole, juste le nombre formaté)
+        function formatNumberForPDF(value, currency) {
+            if (value === 0) return '0,00';
+            
+            // Format avec points pour les milliers et virgule pour les décimales pour l'Ariary
+            if (currency === 'Ariary') {
+                let formattedValue = value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                if (formattedValue.includes('.')) {
+                    const parts = formattedValue.split('.');
+                    if (parts.length > 2) {
+                        const lastDotIndex = formattedValue.lastIndexOf('.');
+                        formattedValue = formattedValue.substring(0, lastDotIndex) + ',' + formattedValue.substring(lastDotIndex + 1);
+                    } else {
+                        formattedValue = formattedValue.replace('.', ',');
+                    }
+                }
+                return formattedValue;
+            } else {
+                // Pour les autres devises, format français standard
+                return new Intl.NumberFormat('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                    useGrouping: true
+                }).format(value);
+            }
+        }
+
+        // Fonction pour obtenir le symbole de la devise
+        function getCurrencySymbol(currency) {
+            const symbols = {
+                'Ariary': 'Ar',
+                'Euro': '€',
+                'Franc Suisse': 'CHF',
+                'Livre': '£',
+                'Banque Euro': '€'
+            };
+            return symbols[currency] || '';
         }
 
         // Fonction pour afficher les détails des dons (double-clic)
@@ -2504,7 +2516,7 @@
                 html += '</div>';
             }
             
-            // Section des dons membres
+            // Section des dons membres - Gardé pour l'affichage HTML
             if (donsMembresData.length > 0) {
                 html += '<div class="tiers-section">';
                 html += '<h4>👥 DÉTAILS DONS PAR MEMBRE</h4>';
@@ -2838,7 +2850,7 @@
                 html += `<td>${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}</td>`;
                 html += `<td>${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}</td>`;
             } else {
-                html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+                html += `<td>0,00 Ar</td><td>0,00 €</td><td>0,00 CHF</td><td>0,00 £</td><td>0,00 €</td>`;
             }
             html += '</tr>';
             
@@ -2853,7 +2865,7 @@
                 html += `<td>${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}</td>`;
                 html += `<td>${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}</td>`;
             } else {
-                html += `<td>0 Ar</td><td>0 €</td><td>0 CHF</td><td>0 £</td><td>0 €</td>`;
+                html += `<td>0,00 Ar</td><td>0,00 €</td><td>0,00 CHF</td><td>0,00 £</td><td>0,00 €</td>`;
             }
             html += '</tr>';
             
@@ -3126,15 +3138,16 @@
             });
             html += '</tr>';
             
-            // EN MAIN
+            // EN MAIN - Calcul corrigé : fonds propres + emprunt + prêt + transfert + change
             html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
             Object.keys(columnMapping).forEach(currency => {
+                const fondsPropresValue = fondsPropres[currency];
                 const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
                 const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
                 const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
                 const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
                 
-                const enMain = emprunt + pret + transfert + change;
+                const enMain = fondsPropresValue + emprunt + pret + transfert + change;
                 html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
             });
             html += '</tr>';
@@ -3600,6 +3613,12 @@
         // Fonction pour générer le PDF
         async function generatePDF() {
             try {
+                // Vérifier que l'utilisateur est authentifié
+                if (!isAuthenticated) {
+                    showPasswordModal();
+                    return;
+                }
+                
                 // Afficher l'overlay de chargement
                 document.getElementById('pdfLoading').style.display = 'flex';
                 
@@ -3643,6 +3662,12 @@
                     });
                 });
                 
+                // Calculer les fonds propres
+                const fondsPropres = {};
+                Object.keys(globalTotals).forEach(currency => {
+                    fondsPropres[currency] = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'] - globalTotals[currency]['Depenses'];
+                });
+                
                 // Tableau récapitulatif global
                 doc.setFontSize(14);
                 doc.setTextColor(231, 76, 60);
@@ -3660,8 +3685,7 @@
                     const row = [category];
                     currencies.forEach(currency => {
                         const value = globalTotals[currency][category];
-                        const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                        row.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                        row.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                     });
                     globalData.push(row);
                 });
@@ -3670,8 +3694,7 @@
                 const recettesRow = ['RECETTES TOTALES'];
                 currencies.forEach(currency => {
                     const value = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    recettesRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    recettesRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(recettesRow);
                 
@@ -3679,17 +3702,15 @@
                 const depensesRow = ['DEPENSES TOTALES'];
                 currencies.forEach(currency => {
                     const value = globalTotals[currency]['Depenses'];
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    depensesRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    depensesRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(depensesRow);
                 
                 // Fonds propres
                 const fondsRow = ['FONDS PROPRES'];
                 currencies.forEach(currency => {
-                    const value = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'] - globalTotals[currency]['Depenses'];
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    fondsRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    const value = fondsPropres[currency];
+                    fondsRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(fondsRow);
                 
@@ -3701,8 +3722,7 @@
                 const empruntRow = ['Emprunt'];
                 currencies.forEach(currency => {
                     const value = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    empruntRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    empruntRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(empruntRow);
                 
@@ -3710,8 +3730,7 @@
                 const pretRow = ['Prêt'];
                 currencies.forEach(currency => {
                     const value = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    pretRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    pretRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(pretRow);
                 
@@ -3719,8 +3738,7 @@
                 const transfertRow = ['Transfert'];
                 currencies.forEach(currency => {
                     const value = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    transfertRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    transfertRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(transfertRow);
                 
@@ -3728,21 +3746,21 @@
                 const changeRow = ['Change'];
                 currencies.forEach(currency => {
                     const value = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    changeRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    changeRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(changeRow);
                 
-                // En main
+                // EN MAIN - Calcul corrigé : fonds propres + emprunt + prêt + transfert + change
                 const enMainRow = ['EN MAIN'];
                 currencies.forEach(currency => {
+                    const fondsPropresValue = fondsPropres[currency];
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
                     const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
                     const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
                     const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
-                    const value = emprunt + pret + transfert + change;
-                    const units = { 'Ariary': 'Ar', 'Euro': '€', 'Franc Suisse': 'CHF', 'Livre': '£', 'Banque Euro': '€' };
-                    enMainRow.push(`${new Intl.NumberFormat('fr-FR').format(value)} ${units[currency]}`);
+                    
+                    const value = fondsPropresValue + emprunt + pret + transfert + change;
+                    enMainRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(enMainRow);
                 
@@ -3752,8 +3770,10 @@
                     startY: 35,
                     theme: 'striped',
                     headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-                    styles: { fontSize: 9, cellPadding: 2 },
-                    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 30 } }
+                    styles: { fontSize: 9, cellPadding: 2, halign: 'right' },
+                    columnStyles: { 
+                        0: { fontStyle: 'bold', cellWidth: 30, halign: 'left' } 
+                    }
                 });
                 
                 let finalY = doc.lastAutoTable.finalY + 10;
@@ -3762,6 +3782,124 @@
                 if (finalY > 180) {
                     doc.addPage();
                     finalY = 20;
+                }
+                
+                // Détails des dépenses par catégorie (récapitulatif)
+                if (detailsDepensesData.length > 0) {
+                    doc.setFontSize(14);
+                    doc.setTextColor(231, 76, 60);
+                    doc.text('RÉCAPITULATIF DES DÉPENSES PAR CATÉGORIE', 15, finalY);
+                    
+                    finalY += 7;
+                    
+                    const depensesHeaders = [['Catégorie', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
+                    const depensesData = [];
+                    
+                    let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanque = 0;
+                    
+                    detailsDepensesData.forEach(item => {
+                        depensesData.push([
+                            item['Depenses'],
+                            formatNumberForPDF(item['Ariary'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                            formatNumberForPDF(item['Euro'], 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                            formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                            formatNumberForPDF(item['Livre'], 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                            formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
+                        ]);
+                        
+                        totalAriary += item['Ariary'];
+                        totalEuro += item['Euro'];
+                        totalFrancSuisse += item['Franc Suisse'];
+                        totalLivre += item['Livre'];
+                        totalBanque += item['Banque Euro'];
+                    });
+                    
+                    // Ligne total avec fond orange
+                    depensesData.push([
+                        { content: 'TOTAL DÉPENSES', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalFrancSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                    ]);
+                    
+                    doc.autoTable({
+                        head: depensesHeaders,
+                        body: depensesData,
+                        startY: finalY + 2,
+                        theme: 'striped',
+                        headStyles: { fillColor: [231, 76, 60], textColor: 255 },
+                        styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
+                    });
+                    
+                    finalY = doc.lastAutoTable.finalY + 10;
+                }
+                
+                // Détails détaillés des dépenses par catégorie
+                if (Object.keys(detailsDepensesParCategorie).length > 0) {
+                    for (const [categorie, items] of Object.entries(detailsDepensesParCategorie)) {
+                        if (items.length > 0) {
+                            if (finalY > 180) {
+                                doc.addPage();
+                                finalY = 20;
+                            }
+                            
+                            doc.setFontSize(12);
+                            doc.setTextColor(52, 73, 94);
+                            doc.text(`Détail - ${categorie}`, 15, finalY);
+                            
+                            const depHeaders = [['Libellé', 'Ariary Entrée', 'Ariary Sortie', 'Euro Entrée', 'Euro Sortie']];
+                            const depData = [];
+                            
+                            let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0;
+                            
+                            items.forEach(item => {
+                                depData.push([
+                                    item.libelle,
+                                    formatNumberForPDF(item['Ariary Entrée'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                    formatNumberForPDF(item['Ariary Sortie'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                    formatNumberForPDF(item['Euro Entrée'], 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                    formatNumberForPDF(item['Euro Sortie'], 'Euro') + ' ' + getCurrencySymbol('Euro')
+                                ]);
+                                
+                                totalAriaryEntree += item['Ariary Entrée'];
+                                totalAriarySortie += item['Ariary Sortie'];
+                                totalEuroEntree += item['Euro Entrée'];
+                                totalEuroSortie += item['Euro Sortie'];
+                            });
+                            
+                            // Ligne total avec fond orange
+                            depData.push([
+                                { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                                { content: formatNumberForPDF(totalAriaryEntree, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                                { content: formatNumberForPDF(totalAriarySortie, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                                { content: formatNumberForPDF(totalEuroEntree, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                                { content: formatNumberForPDF(totalEuroSortie, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                            ]);
+                            
+                            doc.autoTable({
+                                head: depHeaders,
+                                body: depData,
+                                startY: finalY + 2,
+                                theme: 'striped',
+                                headStyles: { fillColor: [52, 152, 219], textColor: 255 },
+                                styles: { fontSize: 7, cellPadding: 1, halign: 'right' },
+                                columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
+                            });
+                            
+                            finalY = doc.lastAutoTable.finalY + 5;
+                        }
+                    }
+                }
+                
+                // Vérifier l'espace avant les prochaines sections
+                if (finalY > 170) {
+                    doc.addPage();
+                    finalY = 20;
+                } else {
+                    finalY += 10;
                 }
                 
                 // Détails des ventes
@@ -3775,16 +3913,33 @@
                     const ventesHeaders = [['Localité', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
                     const ventesData = [];
                     
+                    let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                    
                     detailsVentesData.forEach(item => {
                         ventesData.push([
                             item.localite,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                            `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                            `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
+                            formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                            formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                            formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                            formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                            formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                         ]);
+                        
+                        totalAriary += item.Ariary;
+                        totalEuro += item.Euro;
+                        totalSuisse += item['Franc Suisse'];
+                        totalLivre += item.Livre;
+                        totalBanque += item['Banque Euro'];
                     });
+                    
+                    ventesData.push([
+                        { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                    ]);
                     
                     doc.autoTable({
                         head: ventesHeaders,
@@ -3792,15 +3947,19 @@
                         startY: finalY,
                         theme: 'striped',
                         headStyles: { fillColor: [52, 152, 219], textColor: 255 },
-                        styles: { fontSize: 8, cellPadding: 2 }
+                        styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
                     });
                     
                     finalY = doc.lastAutoTable.finalY + 10;
-                    
-                    if (finalY > 180) {
-                        doc.addPage();
-                        finalY = 20;
-                    }
+                }
+                
+                // Vérifier l'espace
+                if (finalY > 170) {
+                    doc.addPage();
+                    finalY = 20;
+                } else {
+                    finalY += 5;
                 }
                 
                 // Détails des collectes
@@ -3814,16 +3973,33 @@
                     const collectesHeaders = [['Localité', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
                     const collectesData = [];
                     
+                    let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                    
                     detailsCollectesData.forEach(item => {
                         collectesData.push([
                             item.localite,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                            `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                            `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                            `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
+                            formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                            formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                            formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                            formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                            formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                         ]);
+                        
+                        totalAriary += item.Ariary;
+                        totalEuro += item.Euro;
+                        totalSuisse += item['Franc Suisse'];
+                        totalLivre += item.Livre;
+                        totalBanque += item['Banque Euro'];
                     });
+                    
+                    collectesData.push([
+                        { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                        { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                    ]);
                     
                     doc.autoTable({
                         head: collectesHeaders,
@@ -3831,80 +4007,83 @@
                         startY: finalY,
                         theme: 'striped',
                         headStyles: { fillColor: [46, 204, 113], textColor: 255 },
-                        styles: { fontSize: 8, cellPadding: 2 }
+                        styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
                     });
                     
                     finalY = doc.lastAutoTable.finalY + 10;
-                    
-                    if (finalY > 180) {
-                        doc.addPage();
-                        finalY = 20;
-                    }
                 }
                 
-                // Détails des dépenses par catégorie
-                if (Object.keys(detailsDepensesParCategorie).length > 0) {
-                    doc.setFontSize(14);
-                    doc.setTextColor(231, 76, 60);
-                    doc.text('DÉTAILS DES DÉPENSES PAR CATÉGORIE', 15, finalY);
-                    
-                    for (const [categorie, items] of Object.entries(detailsDepensesParCategorie)) {
-                        if (items.length > 0) {
-                            finalY += 10;
-                            
-                            if (finalY > 180) {
-                                doc.addPage();
-                                finalY = 20;
-                            }
-                            
-                            doc.setFontSize(12);
-                            doc.setTextColor(52, 73, 94);
-                            doc.text(categorie, 15, finalY);
-                            
-                            const depHeaders = [['Libellé', 'Ariary Entrée', 'Ariary Sortie', 'Euro Entrée', 'Euro Sortie']];
-                            const depData = [];
-                            
-                            items.forEach(item => {
-                                depData.push([
-                                    item.libelle,
-                                    `${new Intl.NumberFormat('fr-FR').format(item['Ariary Entrée'])} Ar`,
-                                    `${new Intl.NumberFormat('fr-FR').format(item['Ariary Sortie'])} Ar`,
-                                    `${new Intl.NumberFormat('fr-FR').format(item['Euro Entrée'])} €`,
-                                    `${new Intl.NumberFormat('fr-FR').format(item['Euro Sortie'])} €`
-                                ]);
-                            });
-                            
-                            doc.autoTable({
-                                head: depHeaders,
-                                body: depData,
-                                startY: finalY + 2,
-                                theme: 'striped',
-                                headStyles: { fillColor: [231, 76, 60], textColor: 255 },
-                                styles: { fontSize: 8, cellPadding: 2 }
-                            });
-                            
-                            finalY = doc.lastAutoTable.finalY;
-                        }
-                    }
+                // Vérifier l'espace
+                if (finalY > 170) {
+                    doc.addPage();
+                    finalY = 20;
+                } else {
+                    finalY += 5;
                 }
                 
-                // Détails des dons
-                if (donsMembresData.length > 0 || detailsDonData.length > 0 || donsParLocaliteData.length > 0) {
-                    if (finalY > 170) {
-                        doc.addPage();
-                        finalY = 20;
-                    } else {
-                        finalY += 10;
-                    }
-                    
+                // Détails des dons (sans les dons membres)
+                if (detailsDonData.length > 0 || donsParLocaliteData.length > 0) {
                     doc.setFontSize(14);
                     doc.setTextColor(231, 76, 60);
                     doc.text('DÉTAILS DES DONS', 15, finalY);
                     
+                    finalY += 7;
+                    
+                    // Dons récapitulatifs
+                    if (detailsDonData.length > 0) {
+                        doc.setFontSize(12);
+                        doc.setTextColor(52, 73, 94);
+                        doc.text('Récapitulatif des dons reçus', 15, finalY);
+                        
+                        finalY += 5;
+                        
+                        const donHeaders = [['Type', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
+                        const donData = [];
+                        
+                        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                        
+                        detailsDonData.forEach(item => {
+                            donData.push([
+                                item.Type,
+                                formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                                formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                                formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
+                            ]);
+                            
+                            totalAriary += item.Ariary;
+                            totalEuro += item.Euro;
+                            totalSuisse += item['Franc Suisse'];
+                            totalLivre += item.Livre;
+                            totalBanque += item['Banque Euro'];
+                        });
+                        
+                        donData.push([
+                            { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                        ]);
+                        
+                        doc.autoTable({
+                            head: donHeaders,
+                            body: donData,
+                            startY: finalY,
+                            theme: 'striped',
+                            headStyles: { fillColor: [241, 196, 15], textColor: 0 },
+                            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
+                        });
+                        
+                        finalY = doc.lastAutoTable.finalY + 10;
+                    }
+                    
                     // Dons par localité
                     if (donsParLocaliteData.length > 0) {
-                        finalY += 10;
-                        
                         if (finalY > 180) {
                             doc.addPage();
                             finalY = 20;
@@ -3914,165 +4093,123 @@
                         doc.setTextColor(52, 73, 94);
                         doc.text('Dons par localité', 15, finalY);
                         
+                        finalY += 5;
+                        
                         const localiteHeaders = [['Localité', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
                         const localiteData = [];
+                        
+                        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
                         
                         donsParLocaliteData.forEach(item => {
                             localiteData.push([
                                 item.localite,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
+                                formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                                formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                                formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                             ]);
+                            
+                            totalAriary += item.Ariary;
+                            totalEuro += item.Euro;
+                            totalSuisse += item['Franc Suisse'];
+                            totalLivre += item.Livre;
+                            totalBanque += item['Banque Euro'];
                         });
+                        
+                        localiteData.push([
+                            { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                        ]);
                         
                         doc.autoTable({
                             head: localiteHeaders,
                             body: localiteData,
-                            startY: finalY + 2,
+                            startY: finalY,
                             theme: 'striped',
                             headStyles: { fillColor: [241, 196, 15], textColor: 0 },
-                            styles: { fontSize: 8, cellPadding: 2 }
+                            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
                         });
                         
-                        finalY = doc.lastAutoTable.finalY;
+                        finalY = doc.lastAutoTable.finalY + 10;
                     }
-                    
-                    // Dons récapitulatifs
-                    if (detailsDonData.length > 0) {
-                        finalY += 10;
-                        
-                        if (finalY > 180) {
-                            doc.addPage();
-                            finalY = 20;
-                        }
-                        
-                        doc.setFontSize(12);
-                        doc.setTextColor(52, 73, 94);
-                        doc.text('Récapitulatif des dons reçus', 15, finalY);
-                        
-                        const donHeaders = [['Type', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
-                        const donData = [];
-                        
-                        detailsDonData.forEach(item => {
-                            donData.push([
-                                item.Type,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
-                            ]);
-                        });
-                        
-                        doc.autoTable({
-                            head: donHeaders,
-                            body: donData,
-                            startY: finalY + 2,
-                            theme: 'striped',
-                            headStyles: { fillColor: [241, 196, 15], textColor: 0 },
-                            styles: { fontSize: 8, cellPadding: 2 }
-                        });
-                        
-                        finalY = doc.lastAutoTable.finalY;
-                    }
-                    
-                    // Dons par membre
-                    if (donsMembresData.length > 0) {
-                        finalY += 10;
-                        
-                        if (finalY > 180) {
-                            doc.addPage();
-                            finalY = 20;
-                        }
-                        
-                        doc.setFontSize(12);
-                        doc.setTextColor(52, 73, 94);
-                        doc.text('Dons par membre', 15, finalY);
-                        
-                        const membreHeaders = [['Membre', 'Promesse', 'Payé', 'Reste']];
-                        const membreData = [];
-                        
-                        donsMembresData.forEach(item => {
-                            membreData.push([
-                                item.membre,
-                                `${new Intl.NumberFormat('fr-FR').format(item.promesse)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.paye)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.reste)} €`
-                            ]);
-                        });
-                        
-                        doc.autoTable({
-                            head: membreHeaders,
-                            body: membreData,
-                            startY: finalY + 2,
-                            theme: 'striped',
-                            headStyles: { fillColor: [241, 196, 15], textColor: 0 },
-                            styles: { fontSize: 8, cellPadding: 2 }
-                        });
-                        
-                        finalY = doc.lastAutoTable.finalY;
-                    }
+                }
+                
+                // Vérifier l'espace
+                if (finalY > 170) {
+                    doc.addPage();
+                    finalY = 20;
+                } else {
+                    finalY += 5;
                 }
                 
                 // Détails Emprunt et Prêt
                 if (detailsEmpruntTiersData.length > 0 || detailsPretTiersData.length > 0) {
-                    if (finalY > 170) {
-                        doc.addPage();
-                        finalY = 20;
-                    } else {
-                        finalY += 10;
-                    }
-                    
                     doc.setFontSize(14);
                     doc.setTextColor(231, 76, 60);
                     doc.text('DÉTAILS EMPRUNTS ET PRÊTS', 15, finalY);
                     
+                    finalY += 7;
+                    
                     // Emprunts reçus
                     if (detailsEmpruntTiersData.length > 0) {
-                        finalY += 10;
-                        
-                        if (finalY > 180) {
-                            doc.addPage();
-                            finalY = 20;
-                        }
-                        
                         doc.setFontSize(12);
                         doc.setTextColor(52, 73, 94);
                         doc.text('Personnes qui nous ont prêté de l\'argent', 15, finalY);
                         
+                        finalY += 5;
+                        
                         const empruntHeaders = [['Tiers', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
                         const empruntData = [];
+                        
+                        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
                         
                         detailsEmpruntTiersData.forEach(item => {
                             empruntData.push([
                                 item.tiers,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
+                                formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                                formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                                formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                             ]);
+                            
+                            totalAriary += item.Ariary;
+                            totalEuro += item.Euro;
+                            totalSuisse += item['Franc Suisse'];
+                            totalLivre += item.Livre;
+                            totalBanque += item['Banque Euro'];
                         });
+                        
+                        empruntData.push([
+                            { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                        ]);
                         
                         doc.autoTable({
                             head: empruntHeaders,
                             body: empruntData,
-                            startY: finalY + 2,
+                            startY: finalY,
                             theme: 'striped',
                             headStyles: { fillColor: [155, 89, 182], textColor: 255 },
-                            styles: { fontSize: 8, cellPadding: 2 }
+                            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
                         });
                         
-                        finalY = doc.lastAutoTable.finalY;
+                        finalY = doc.lastAutoTable.finalY + 10;
                     }
                     
                     // Prêts accordés
                     if (detailsPretTiersData.length > 0) {
-                        finalY += 10;
-                        
                         if (finalY > 180) {
                             doc.addPage();
                             finalY = 20;
@@ -4082,30 +4219,50 @@
                         doc.setTextColor(52, 73, 94);
                         doc.text('Personnes qui ont emprunté de l\'argent', 15, finalY);
                         
+                        finalY += 5;
+                        
                         const pretHeaders = [['Tiers', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
                         const pretData = [];
+                        
+                        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
                         
                         detailsPretTiersData.forEach(item => {
                             pretData.push([
                                 item.tiers,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Ariary)} Ar`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Euro)} €`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Franc Suisse'])} CHF`,
-                                `${new Intl.NumberFormat('fr-FR').format(item.Livre)} £`,
-                                `${new Intl.NumberFormat('fr-FR').format(item['Banque Euro'])} €`
+                                formatNumberForPDF(item.Ariary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                formatNumberForPDF(item.Euro, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
+                                formatNumberForPDF(item.Livre, 'Livre') + ' ' + getCurrencySymbol('Livre'),
+                                formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                             ]);
+                            
+                            totalAriary += item.Ariary;
+                            totalEuro += item.Euro;
+                            totalSuisse += item['Franc Suisse'];
+                            totalLivre += item.Livre;
+                            totalBanque += item['Banque Euro'];
                         });
+                        
+                        pretData.push([
+                            { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                            { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                        ]);
                         
                         doc.autoTable({
                             head: pretHeaders,
                             body: pretData,
-                            startY: finalY + 2,
+                            startY: finalY,
                             theme: 'striped',
                             headStyles: { fillColor: [155, 89, 182], textColor: 255 },
-                            styles: { fontSize: 8, cellPadding: 2 }
+                            styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
+                            columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
                         });
                         
-                        finalY = doc.lastAutoTable.finalY;
+                        finalY = doc.lastAutoTable.finalY + 10;
                     }
                 }
                 
