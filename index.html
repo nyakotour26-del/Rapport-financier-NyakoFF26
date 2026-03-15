@@ -1241,6 +1241,15 @@
         let currentDateIndex = -1;
         let dataLoaded = false;
         
+        // Variables pour les totaux des dépenses depuis C1, D1, E1, F1, G1
+        let depensesTotales = {
+            'Ariary': 0,
+            'Euro': 0,
+            'Franc Suisse': 0,
+            'Livre': 0,
+            'Banque Euro': 0
+        };
+        
         // Données pour les "Autres ressources et depenses"
         let autresSourcesData = {
             'Emprunt': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 },
@@ -1249,7 +1258,7 @@
             'Change': { 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 }
         };
         
-        // Données pour les détails dépenses (B2:G15)
+        // Données pour les détails dépenses (B2:G15) - récapitulatif
         let detailsDepensesData = [];
         
         // Données détaillées par catégorie de dépense
@@ -1478,7 +1487,7 @@
             }
         }
 
-        // Charger les détails des dépenses (avec filtrage par catégorie)
+        // Charger les détails des dépenses (avec filtrage par catégorie) - Version corrigée avec VISA
         async function loadDetailsDepenses() {
             try {
                 console.log('Chargement des détails des dépenses...');
@@ -1487,50 +1496,47 @@
                     const csvText = await response.text();
                     const lines = parseCSV(csvText);
                     
-                    // Initialiser l'objet pour chaque catégorie
+                    // Initialiser l'objet pour chaque catégorie selon la nouvelle liste avec VISA
                     const categories = [
-                        'Admin', 'Artisanat', 'Cadeaux', 'Divers', 'Don',
-                        'Nourritures', 'Logistique', 'Répétition', 'Tenue',
-                        'Tp terrestre&frais', 'Tp aerien&frais', 'Vente', 'Visa'
+                        'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
+                        'Frais bancaire', 'Logistique', 'Répetition', 'Nourritures&snack',
+                        'Tenue', 'Soutien participants', 'Voiture & frais voyage',
+                        'Vol&frais voyage', 'Santé', 'Visa' // VISA est maintenant inclus
                     ];
                     
                     categories.forEach(cat => {
                         detailsDepensesParCategorie[cat] = [];
                     });
                     
-                    // Parcourir les lignes à partir de la ligne 2 (index 1)
-                    for (let i = 1; i < lines.length; i++) {
+                    // Parcourir les lignes de 3 à 17 (B3 à B17)
+                    for (let i = 2; i < lines.length && i < 17; i++) {
                         const row = lines[i];
-                        if (row && row.length >= 6) {
-                            const libelle = row[0] ? row[0].trim() : ''; // Colonne A
-                            const categorie = row[1] ? row[1].trim() : ''; // Colonne B
+                        if (row && row.length >= 7) {
+                            const libelle = row[1] ? row[1].trim() : ''; // Colonne B (index 1)
                             
-                            if (libelle && categorie && categories.includes(categorie)) {
-                                const ariaryEntree = parseFloat(cleanNumber(row[2] || '0')); // Colonne C
-                                const ariarySortie = parseFloat(cleanNumber(row[3] || '0')); // Colonne D
-                                const euroEntree = parseFloat(cleanNumber(row[4] || '0')); // Colonne E
-                                const euroSortie = parseFloat(cleanNumber(row[5] || '0')); // Colonne F
+                            if (libelle && libelle !== '') {
+                                // Vérifier si le libellé correspond à une catégorie de la liste
+                                const categorieTrouvee = categories.find(cat => 
+                                    cat.toLowerCase() === libelle.toLowerCase() ||
+                                    cat.includes(libelle) ||
+                                    libelle.includes(cat)
+                                );
                                 
-                                // Pour les dons, ne prendre que les sorties (accordés)
-                                if (categorie === 'Don') {
-                                    if (ariarySortie > 0 || euroSortie > 0) {
-                                        detailsDepensesParCategorie[categorie].push({
-                                            'libelle': libelle,
-                                            'Ariary Entrée': 0,
-                                            'Ariary Sortie': ariarySortie,
-                                            'Euro Entrée': 0,
-                                            'Euro Sortie': euroSortie
-                                        });
-                                    }
-                                } else {
-                                    // Pour les autres catégories, prendre toutes les entrées/sorties
-                                    if (ariaryEntree > 0 || ariarySortie > 0 || euroEntree > 0 || euroSortie > 0) {
-                                        detailsDepensesParCategorie[categorie].push({
+                                if (categorieTrouvee) {
+                                    const ariaryEntree = parseFloat(cleanNumber(row[2] || '0')); // Colonne C
+                                    const ariarySortie = parseFloat(cleanNumber(row[3] || '0')); // Colonne D
+                                    const euroEntree = parseFloat(cleanNumber(row[4] || '0')); // Colonne E
+                                    const euroSortie = parseFloat(cleanNumber(row[5] || '0')); // Colonne F
+                                    const banqueEuro = parseFloat(cleanNumber(row[6] || '0')); // Colonne G
+                                    
+                                    if (ariaryEntree > 0 || ariarySortie > 0 || euroEntree > 0 || euroSortie > 0 || banqueEuro > 0) {
+                                        detailsDepensesParCategorie[categorieTrouvee].push({
                                             'libelle': libelle,
                                             'Ariary Entrée': ariaryEntree,
                                             'Ariary Sortie': ariarySortie,
                                             'Euro Entrée': euroEntree,
-                                            'Euro Sortie': euroSortie
+                                            'Euro Sortie': euroSortie,
+                                            'Banque Euro': banqueEuro
                                         });
                                     }
                                 }
@@ -1538,7 +1544,13 @@
                         }
                     }
                     
-                    console.log('✅ Détails dépenses chargés:', Object.keys(detailsDepensesParCategorie).length);
+                    console.log('✅ Détails dépenses chargés:', Object.keys(detailsDepensesParCategorie).length, 'catégories');
+                    console.log('✅ Visa inclus dans les catégories');
+                    
+                    Object.keys(detailsDepensesParCategorie).forEach(cat => {
+                        console.log(`   - ${cat}: ${detailsDepensesParCategorie[cat].length} éléments`);
+                    });
+                    
                 } else {
                     console.error('Erreur chargement détails dépenses:', response.status);
                 }
@@ -1640,7 +1652,7 @@
             }
         }
 
-        // Charger toutes les données supplémentaires
+        // Charger toutes les données supplémentaires - Version corrigée avec les totaux des dépenses depuis C1, D1, E1, F1, G1
         async function loadAutresSources() {
             try {
                 console.log('Chargement des autres sources...');
@@ -1656,31 +1668,88 @@
                     const csvText = await response.text();
                     const lines = parseCSV(csvText);
                     
-                    // 1. Charger les détails dépenses (B2:G15) - récapitulatif
+                    // Lire les valeurs des cellules C1, D1, E1, F1, G1 pour les dépenses totales
+                    if (lines.length > 0) {
+                        const row1 = lines[0];
+                        if (row1 && row1.length >= 7) {
+                            depensesTotales['Ariary'] = parseFloat(cleanNumber(row1[2] || '0')); // Colonne C
+                            depensesTotales['Euro'] = parseFloat(cleanNumber(row1[3] || '0')); // Colonne D
+                            depensesTotales['Franc Suisse'] = parseFloat(cleanNumber(row1[4] || '0')); // Colonne E
+                            depensesTotales['Livre'] = parseFloat(cleanNumber(row1[5] || '0')); // Colonne F
+                            depensesTotales['Banque Euro'] = parseFloat(cleanNumber(row1[6] || '0')); // Colonne G
+                            
+                            console.log('✅ Dépenses totales chargées depuis C1, D1, E1, F1, G1:', depensesTotales);
+                        }
+                    }
+                    
+                    // 1. Charger les détails dépenses (B3:G17) - RÉCAPITULATIF avec totaux des colonnes
                     detailsDepensesData = [];
-                    for (let i = 1; i < 15; i++) {
-                        if (i < lines.length) {
-                            const row = lines[i];
-                            if (row && row.length >= 7) {
-                                const titre = row[1] ? row[1].trim() : '';
-                                const categoriesValides = [
-                                    'Admin', 'Artisanat', 'Cadeaux', 'Divers', 'Don',
-                                    'Nourritures', 'Logistique', 'Répétition', 'Tenue',
-                                    'Tp terrestre&frais', 'Tp aerien&frais', 'Vente', 'Visa'
-                                ];
-                                if (titre && categoriesValides.includes(titre)) {
-                                    detailsDepensesData.push({
-                                        'Depenses': titre,
-                                        'Ariary': parseFloat(cleanNumber(row[2] || '0')),
-                                        'Euro': parseFloat(cleanNumber(row[3] || '0')),
-                                        'Franc Suisse': parseFloat(cleanNumber(row[4] || '0')),
-                                        'Livre': parseFloat(cleanNumber(row[5] || '0')),
-                                        'Banque Euro': parseFloat(cleanNumber(row[6] || '0'))
-                                    });
-                                }
+                    
+                    // Mise à jour de la liste des catégories pour le récapitulatif avec VISA
+                    const categoriesRecap = [
+                        'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
+                        'Frais bancaire', 'Logistique', 'Répetition', 'Nourritures&snack',
+                        'Tenue', 'Soutien participants', 'Voiture & frais voyage',
+                        'Vol&frais voyage', 'Santé', 'Visa' // VISA inclus
+                    ];
+                    
+                    // Pour calculer les totaux par colonne
+                    let totalAriary = 0;
+                    let totalEuro = 0;
+                    let totalFrancSuisse = 0;
+                    let totalLivre = 0;
+                    let totalBanqueEuro = 0;
+                    
+                    // Lire les lignes de B3 à B17 (index 2 à 16)
+                    for (let i = 2; i < 17 && i < lines.length; i++) {
+                        const row = lines[i];
+                        if (row && row.length >= 7) {
+                            const titre = row[1] ? row[1].trim() : ''; // Colonne B (index 1)
+                            
+                            // Valeurs par colonne
+                            const ariary = parseFloat(cleanNumber(row[2] || '0')); // Colonne C
+                            const euro = parseFloat(cleanNumber(row[3] || '0')); // Colonne D
+                            const francSuisse = parseFloat(cleanNumber(row[4] || '0')); // Colonne E
+                            const livre = parseFloat(cleanNumber(row[5] || '0')); // Colonne F
+                            const banqueEuro = parseFloat(cleanNumber(row[6] || '0')); // Colonne G
+                            
+                            // Ajouter aux totaux
+                            totalAriary += ariary;
+                            totalEuro += euro;
+                            totalFrancSuisse += francSuisse;
+                            totalLivre += livre;
+                            totalBanqueEuro += banqueEuro;
+                            
+                            // Si c'est une catégorie de la liste, ajouter aux détails
+                            if (titre && categoriesRecap.includes(titre)) {
+                                detailsDepensesData.push({
+                                    'Depenses': titre,
+                                    'Ariary': ariary,
+                                    'Euro': euro,
+                                    'Franc Suisse': francSuisse,
+                                    'Livre': livre,
+                                    'Banque Euro': banqueEuro
+                                });
                             }
                         }
                     }
+                    
+                    // Ajouter une ligne de total à detailsDepensesData pour l'affichage
+                    detailsDepensesData.push({
+                        'Depenses': 'TOTAL DÉPENSES (somme colonnes)',
+                        'Ariary': totalAriary,
+                        'Euro': totalEuro,
+                        'Franc Suisse': totalFrancSuisse,
+                        'Livre': totalLivre,
+                        'Banque Euro': totalBanqueEuro
+                    });
+                    
+                    console.log('✅ Récapitulatif dépenses chargé avec totaux:');
+                    console.log(`   Ariary: ${totalAriary}`);
+                    console.log(`   Euro: ${totalEuro}`);
+                    console.log(`   Franc Suisse: ${totalFrancSuisse}`);
+                    console.log(`   Livre: ${totalLivre}`);
+                    console.log(`   Banque Euro: ${totalBanqueEuro}`);
                     
                     // 2. Charger les détails don (I3:N4) - récapitulatif (CORRECTION DES COLONNES)
                     detailsDonData = [];
@@ -2697,23 +2766,25 @@
                 html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
             } else {
                 html = '<table>';
-                html += '<tr><th>Libellé</th><th>Ariary Entrée</th><th>Ariary Sortie</th><th>Euro Entrée</th><th>Euro Sortie</th></tr>';
+                html += '<tr><th>Libellé</th><th>Ariary Entrée</th><th>Ariary Sortie</th><th>Euro Entrée</th><th>Euro Sortie</th><th>Banque Euro</th></tr>';
                 
-                let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0;
+                let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
                 
                 detailsDepensesParCategorie[categorie].forEach(item => {
                     html += '<tr>';
                     html += `<td>${item.libelle}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'], 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'], 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'], 'Euro')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'], 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'] || 0, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'] || 0, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'] || 0, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'] || 0, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'] || 0, 'Banque Euro')}</td>`;
                     html += '</tr>';
                     
-                    totalAriaryEntree += item['Ariary Entrée'];
-                    totalAriarySortie += item['Ariary Sortie'];
-                    totalEuroEntree += item['Euro Entrée'];
-                    totalEuroSortie += item['Euro Sortie'];
+                    totalAriaryEntree += item['Ariary Entrée'] || 0;
+                    totalAriarySortie += item['Ariary Sortie'] || 0;
+                    totalEuroEntree += item['Euro Entrée'] || 0;
+                    totalEuroSortie += item['Euro Sortie'] || 0;
+                    totalBanqueEuro += item['Banque Euro'] || 0;
                 });
                 
                 html += '<tr class="total-row">';
@@ -2722,6 +2793,7 @@
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</td>`;
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroEntree, 'Euro')}</td>`;
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroSortie, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</td>`;
                 html += '</tr>';
                 
                 html += '</table>';
@@ -2732,7 +2804,8 @@
                 html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
                 html += '<strong>SOLDE NET :</strong><br>';
                 html += `Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
-                html += `Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}`;
+                html += `Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}<br>`;
+                html += `Banque Euro : ${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}`;
                 html += '</div>';
             }
             
@@ -2750,7 +2823,7 @@
             bulle.style.top = '20px';
         }
         
-        // Fonction pour afficher la bulle des dépenses (récapitulatif avec catégories cliquables)
+        // Fonction pour afficher la bulle des dépenses (récapitulatif avec catégories cliquables) - Version corrigée avec total en orange
         function showDetailsDepenses(event) {
             const bulle = document.getElementById('detailsBulle');
             const overlay = document.getElementById('detailsOverlay');
@@ -2769,7 +2842,9 @@
                     'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
                 };
                 
-                detailsDepensesData.forEach(item => {
+                // Afficher toutes les lignes sauf la dernière (qui est le total)
+                for (let i = 0; i < detailsDepensesData.length - 1; i++) {
+                    const item = detailsDepensesData[i];
                     html += `<tr class="detail-item" onclick="showCategorieDepense(event, '${item['Depenses']}')" title="Cliquez pour voir les détails">`;
                     html += `<td>${item['Depenses']}</td>`;
                     html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
@@ -2784,15 +2859,17 @@
                     totaux['Franc Suisse'] += item['Franc Suisse'];
                     totaux['Livre'] += item['Livre'];
                     totaux['Banque Euro'] += item['Banque Euro'];
-                });
+                }
                 
-                html += '<tr class="total-row">';
-                html += '<td>TOTAL DÉPENSES</td>';
-                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
-                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
-                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
-                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
-                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                // Afficher la ligne de total (dernière ligne) en orange
+                const totalItem = detailsDepensesData[detailsDepensesData.length - 1];
+                html += '<tr class="total-row" style="background-color: #ffa500 !important; font-weight: bold;">';
+                html += `<td>${totalItem['Depenses']}</td>`;
+                html += `<td>${formatNumberWithUnit(totalItem['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totalItem['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totalItem['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totalItem['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totalItem['Banque Euro'], 'Banque Euro')}</td>`;
                 html += '</tr>';
                 
                 html += '</table>';
@@ -3026,8 +3103,7 @@
                 globalTotals[currency] = {
                     'Ventes': 0,
                     'Collecte': 0,
-                    'Don': 0,
-                    'Depenses': 0
+                    'Don': 0
                 };
             });
 
@@ -3037,14 +3113,13 @@
                     globalTotals[currency]['Ventes'] += parseFinancialValue(row[cols['Ventes']] || '0');
                     globalTotals[currency]['Collecte'] += parseFinancialValue(row[cols['Collecte']] || '0');
                     globalTotals[currency]['Don'] += parseFinancialValue(row[cols['Don']] || '0');
-                    globalTotals[currency]['Depenses'] += parseFinancialValue(row[cols['Depenses']] || '0');
                 });
             });
 
             const fondsPropres = {};
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'];
-                const depenses = globalTotals[currency]['Depenses'];
+                const depenses = depensesTotales[currency];
                 fondsPropres[currency] = recettes - depenses;
             });
 
@@ -3077,7 +3152,12 @@
                 
                 html += `<tr class="${rowClass}" ${clickHandler}><td class="category">${category}</td>`;
                 Object.keys(columnMapping).forEach(currency => {
-                    const value = globalTotals[currency][category];
+                    let value = 0;
+                    if (category === 'Depenses') {
+                        value = depensesTotales[currency];
+                    } else {
+                        value = globalTotals[currency][category];
+                    }
                     html += `<td>${formatNumberWithUnit(value, currency)}</td>`;
                 });
                 html += '</tr>';
@@ -3092,7 +3172,7 @@
             
             html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES</td>';
             Object.keys(columnMapping).forEach(currency => {
-                const depenses = globalTotals[currency]['Depenses'];
+                const depenses = depensesTotales[currency];
                 html += `<td>${formatNumberWithUnit(depenses, currency)}</td>`;
             });
             html += '</tr>';
@@ -3649,7 +3729,7 @@
                 
                 const globalTotals = {};
                 Object.keys(columnMapping).forEach(currency => {
-                    globalTotals[currency] = { 'Ventes': 0, 'Collecte': 0, 'Don': 0, 'Depenses': 0 };
+                    globalTotals[currency] = { 'Ventes': 0, 'Collecte': 0, 'Don': 0 };
                 });
                 
                 sheetData.forEach(row => {
@@ -3658,14 +3738,16 @@
                         globalTotals[currency]['Ventes'] += parseFinancialValue(row[cols['Ventes']] || '0');
                         globalTotals[currency]['Collecte'] += parseFinancialValue(row[cols['Collecte']] || '0');
                         globalTotals[currency]['Don'] += parseFinancialValue(row[cols['Don']] || '0');
-                        globalTotals[currency]['Depenses'] += parseFinancialValue(row[cols['Depenses']] || '0');
                     });
                 });
+                
+                // Utiliser les dépenses totales depuis C1, D1, E1, F1, G1
+                const depensesTotalesPDF = depensesTotales;
                 
                 // Calculer les fonds propres
                 const fondsPropres = {};
                 Object.keys(globalTotals).forEach(currency => {
-                    fondsPropres[currency] = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'] - globalTotals[currency]['Depenses'];
+                    fondsPropres[currency] = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'] - depensesTotalesPDF[currency];
                 });
                 
                 // Tableau récapitulatif global
@@ -3684,7 +3766,12 @@
                 categories.forEach(category => {
                     const row = [category];
                     currencies.forEach(currency => {
-                        const value = globalTotals[currency][category];
+                        let value = 0;
+                        if (category === 'Depenses') {
+                            value = depensesTotalesPDF[currency];
+                        } else {
+                            value = globalTotals[currency][category];
+                        }
                         row.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                     });
                     globalData.push(row);
@@ -3701,7 +3788,7 @@
                 // Dépenses totales
                 const depensesRow = ['DEPENSES TOTALES'];
                 currencies.forEach(currency => {
-                    const value = globalTotals[currency]['Depenses'];
+                    const value = depensesTotalesPDF[currency];
                     depensesRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(depensesRow);
@@ -3850,24 +3937,26 @@
                             doc.setTextColor(52, 73, 94);
                             doc.text(`Détail - ${categorie}`, 15, finalY);
                             
-                            const depHeaders = [['Libellé', 'Ariary Entrée', 'Ariary Sortie', 'Euro Entrée', 'Euro Sortie']];
+                            const depHeaders = [['Libellé', 'Ariary Entrée', 'Ariary Sortie', 'Euro Entrée', 'Euro Sortie', 'Banque Euro']];
                             const depData = [];
                             
-                            let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0;
+                            let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
                             
                             items.forEach(item => {
                                 depData.push([
                                     item.libelle,
-                                    formatNumberForPDF(item['Ariary Entrée'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
-                                    formatNumberForPDF(item['Ariary Sortie'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
-                                    formatNumberForPDF(item['Euro Entrée'], 'Euro') + ' ' + getCurrencySymbol('Euro'),
-                                    formatNumberForPDF(item['Euro Sortie'], 'Euro') + ' ' + getCurrencySymbol('Euro')
+                                    formatNumberForPDF(item['Ariary Entrée'] || 0, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                    formatNumberForPDF(item['Ariary Sortie'] || 0, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
+                                    formatNumberForPDF(item['Euro Entrée'] || 0, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                    formatNumberForPDF(item['Euro Sortie'] || 0, 'Euro') + ' ' + getCurrencySymbol('Euro'),
+                                    formatNumberForPDF(item['Banque Euro'] || 0, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
                                 ]);
                                 
-                                totalAriaryEntree += item['Ariary Entrée'];
-                                totalAriarySortie += item['Ariary Sortie'];
-                                totalEuroEntree += item['Euro Entrée'];
-                                totalEuroSortie += item['Euro Sortie'];
+                                totalAriaryEntree += item['Ariary Entrée'] || 0;
+                                totalAriarySortie += item['Ariary Sortie'] || 0;
+                                totalEuroEntree += item['Euro Entrée'] || 0;
+                                totalEuroSortie += item['Euro Sortie'] || 0;
+                                totalBanqueEuro += item['Banque Euro'] || 0;
                             });
                             
                             // Ligne total avec fond orange
@@ -3876,7 +3965,8 @@
                                 { content: formatNumberForPDF(totalAriaryEntree, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
                                 { content: formatNumberForPDF(totalAriarySortie, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
                                 { content: formatNumberForPDF(totalEuroEntree, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                                { content: formatNumberForPDF(totalEuroSortie, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
+                                { content: formatNumberForPDF(totalEuroSortie, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
+                                { content: formatNumberForPDF(totalBanqueEuro, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
                             ]);
                             
                             doc.autoTable({
