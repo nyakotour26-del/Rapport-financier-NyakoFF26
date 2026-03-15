@@ -3218,16 +3218,14 @@
             });
             html += '</tr>';
             
-            // EN MAIN - Calcul corrigé : fonds propres + emprunt + prêt + transfert + change
+            // EN MAIN = FONDS PROPRES + EMPRUNT - TRANSFERT
             html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
             Object.keys(columnMapping).forEach(currency => {
                 const fondsPropresValue = fondsPropres[currency];
                 const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
                 const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
                 
-                const enMain = fondsPropresValue + emprunt + pret + transfert + change;
+                const enMain = fondsPropresValue + emprunt - transfert;
                 html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
             });
             html += '</tr>';
@@ -3837,16 +3835,14 @@
                 });
                 globalData.push(changeRow);
                 
-                // EN MAIN - Calcul corrigé : fonds propres + emprunt + prêt + transfert + change
+                // EN MAIN = FONDS PROPRES + EMPRUNT - TRANSFERT
                 const enMainRow = ['EN MAIN'];
                 currencies.forEach(currency => {
                     const fondsPropresValue = fondsPropres[currency];
                     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                    const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
                     const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                    const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
                     
-                    const value = fondsPropresValue + emprunt + pret + transfert + change;
+                    const value = fondsPropresValue + emprunt - transfert;
                     enMainRow.push(formatNumberForPDF(value, currency) + ' ' + getCurrencySymbol(currency));
                 });
                 globalData.push(enMainRow);
