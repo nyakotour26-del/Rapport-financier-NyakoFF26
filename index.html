@@ -2281,39 +2281,33 @@
                         }
                     }
                     
-                                       // 8. Charger Change (ligne 7 : Q7, R7, S7, T7, U7)
-                    // Ligne 7 (index 6) colonnes Q, R, S, T, U = indices 16, 17, 18, 19, 20
-                    if (lines.length > 6) {
-                        const ligne7 = lines[6];
-                        if (ligne7 && ligne7.length >= 21) {
-                            // Q7 = index 16, R7 = index 17, S7 = index 18, T7 = index 19, U7 = index 20
-                            const montantChange = {
-                                'Ariary': parseFloat(cleanNumber(ligne7[16] || '0')),   // Q7
-                                'Euro': parseFloat(cleanNumber(ligne7[17] || '0')),      // R7
-                                'Franc Suisse': parseFloat(cleanNumber(ligne7[18] || '0')), // S7
-                                'Livre': parseFloat(cleanNumber(ligne7[19] || '0')),      // T7
-                                'Banque Euro': parseFloat(cleanNumber(ligne7[20] || '0'))   // U7
+                    if (lines.length > 21) {
+                        const ligne21 = lines[20];
+                        if (ligne21 && ligne21.length >= 14) {
+                            detailsChangeData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne21[2] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne21[3] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne21[4] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne21[5] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne21[6] || '0'))
                             };
                             
-                            detailsChangeData.montant = montantChange;
-                            
-                            // Pour le remboursement, on utilise les mêmes valeurs car c'est un solde
                             detailsChangeData.remboursement = {
-                                'Ariary': 0,
-                                'Euro': 0,
-                                'Franc Suisse': 0,
-                                'Livre': 0,
-                                'Banque Euro': 0
+                                'Ariary': parseFloat(cleanNumber(ligne21[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne21[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne21[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne21[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne21[13] || '0'))
                             };
                             
-                            autresSourcesData['Change'] = montantChange;
-                            
-                            console.log('✅ Change chargé depuis Q7, R7, S7, T7, U7:', montantChange);
-                        } else {
-                            console.warn('⚠️ Ligne 7 insuffisante pour charger les valeurs du Change');
+                            autresSourcesData['Change'] = {
+                                'Ariary': detailsChangeData.montant.Ariary - detailsChangeData.remboursement.Ariary,
+                                'Euro': detailsChangeData.montant.Euro - detailsChangeData.remboursement.Euro,
+                                'Franc Suisse': detailsChangeData.montant['Franc Suisse'] - detailsChangeData.remboursement['Franc Suisse'],
+                                'Livre': detailsChangeData.montant.Livre - detailsChangeData.remboursement.Livre,
+                                'Banque Euro': detailsChangeData.montant['Banque Euro'] - detailsChangeData.remboursement['Banque Euro']
+                            };
                         }
-                    } else {
-                        console.warn('⚠️ Pas assez de lignes pour charger le Change');
                     }
                     
                     console.log('✅ Données supplémentaires chargées');
