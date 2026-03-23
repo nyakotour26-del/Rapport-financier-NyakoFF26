@@ -2165,7 +2165,9 @@
                             console.log('✅ Emprunt (ligne 4) chargé depuis Q4:U4');
                         }
                     }
-                    
+                            console.log('✅ Emprunt (ligne 4) chargé depuis Q4:U4');
+        console.log('📊 EMPRUNT - Montant:', detailsEmpruntData.montant);
+        console.log('📊 EMPRUNT - Remboursement:', detailsEmpruntData.remboursement);
                   // ============ PRÊT (ligne 6, colonnes Q-U) ============
 if (lines.length > 5) {
     const ligne6 = lines[5];
@@ -2207,16 +2209,16 @@ if (lines.length > 5) {
         console.log('✅ Prêt (ligne 6) - Remboursement J6:N6:', detailsPretData.remboursement);
     }
 }
+        console.log('✅ Prêt (ligne 6) chargé depuis Q6:U6');
+        console.log('📊 PRÊT - Montant:', detailsPretData.montant);
+        console.log('📊 PRÊT - Remboursement:', detailsPretData.remboursement);
 
 // ============ TRANSFERT (ligne 7, colonnes Q-U) ============
 if (lines.length > 6) {
     const ligne7 = lines[6];
     if (ligne7 && ligne7.length >= 21) {
-        // Q7 (colonne 16) = Montant Transfert (Ariary)
-        // R7 (colonne 17) = Euro
-        // S7 (colonne 18) = Franc Suisse
-        // T7 (colonne 19) = Livre
-        // U7 (colonne 20) = Banque Euro
+        // Q7 (colonne 16) = Montant Transfert
+        // U7 (colonne 20) = Dernière colonne du montant
         detailsTransfertData.montant = {
             'Ariary': parseFloat(cleanNumber(ligne7[16] || '0')),
             'Euro': parseFloat(cleanNumber(ligne7[17] || '0')),
@@ -2225,11 +2227,8 @@ if (lines.length > 6) {
             'Banque Euro': parseFloat(cleanNumber(ligne7[20] || '0'))
         };
         
-        // J7 (colonne 9) = Remboursement Transfert (Ariary)
-        // K7 (colonne 10) = Euro
-        // L7 (colonne 11) = Franc Suisse
-        // M7 (colonne 12) = Livre
-        // N7 (colonne 13) = Banque Euro
+        // J7 (colonne 9) = Remboursement Transfert
+        // N7 (colonne 13) = Dernière colonne du remboursement
         detailsTransfertData.remboursement = {
             'Ariary': parseFloat(cleanNumber(ligne7[9] || '0')),
             'Euro': parseFloat(cleanNumber(ligne7[10] || '0')),
@@ -2245,10 +2244,13 @@ if (lines.length > 6) {
             'Livre': detailsTransfertData.montant.Livre - detailsTransfertData.remboursement.Livre,
             'Banque Euro': detailsTransfertData.montant['Banque Euro'] - detailsTransfertData.remboursement['Banque Euro']
         };
-        console.log('✅ Transfert (ligne 7) - Montant Q7:U7:', detailsTransfertData.montant);
-        console.log('✅ Transfert (ligne 7) - Remboursement J7:N7:', detailsTransfertData.remboursement);
+        console.log('✅ Transfert (ligne 7) chargé depuis Q7:U7');
     }
-}                    
+}
+        console.log('✅ Transfert (ligne 7) chargé depuis Q7:U7');
+        console.log('📊 TRANSFERT - Montant:', detailsTransfertData.montant);
+        console.log('📊 TRANSFERT - Remboursement:', detailsTransfertData.remboursement);
+                    
                     // ============ CHANGE (ligne 8, colonnes Q-U) ============
                     if (lines.length > 7) {
                         const ligne8 = lines[7];
@@ -2279,6 +2281,9 @@ if (lines.length > 6) {
                             console.log('✅ Change (ligne 8) chargé depuis Q8:U8');
                         }
                     }
+        console.log('✅ Change (ligne 8) chargé depuis Q8:U8');
+        console.log('📊 CHANGE - Montant:', detailsChangeData.montant);
+        console.log('📊 CHANGE - Remboursement:', detailsChangeData.remboursement);
                     
                     detailsEmpruntTiersData = [];
                     for (let i = 32; i < lines.length; i++) {
