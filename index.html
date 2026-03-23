@@ -1,4 +1,89 @@
-<!DOCTYPE html>
+function showCategorieDepense(event, categorie) {
+    event.stopPropagation();
+    
+    const bulle = document.getElementById('detailsBulle');
+    const overlay = document.getElementById('detailsOverlay');
+    const content = document.getElementById('detailsBulleContent');
+    const titleElement = document.getElementById('bulleTitle');
+    
+    titleElement.textContent = `📋 DÉTAILS ${categorie.toUpperCase()}`;
+    
+    let html = '';
+    
+    if (!detailsDepensesParCategorie[categorie] || detailsDepensesParCategorie[categorie].length === 0) {
+        html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
+    } else {
+        html = ' <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+        html += ' <div class="financial-table-container">';
+        html += '<table class="financial-table">';
+        html += ' <thead> <tr>';
+        html += ' <th>Libellé</th>';
+        html += ' <th>Ariary Entrée</th>';
+        html += ' <th>Ariary Sortie</th>';
+        html += ' <th>Euro Entrée</th>';
+        html += ' <th>Euro Sortie</th>';
+        html += ' <th>Banque Euro</th>';
+        html += ' </tr> </thead> <tbody>';
+        
+        let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
+        
+        // Afficher TOUS les détails sans limite
+        detailsDepensesParCategorie[categorie].forEach(item => {
+            html += ' <tr>';
+            html += ` <td class="category">${item.libelle} </td>`;
+            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'] || 0, 'Ariary')} </td>`;
+            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'] || 0, 'Ariary')} </td>`;
+            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'] || 0, 'Euro')} </td>`;
+            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'] || 0, 'Euro')} </td>`;
+            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'] || 0, 'Banque Euro')} </td>`;
+            html += ' </tr>';
+            
+            totalAriaryEntree += item['Ariary Entrée'] || 0;
+            totalAriarySortie += item['Ariary Sortie'] || 0;
+            totalEuroEntree += item['Euro Entrée'] || 0;
+            totalEuroSortie += item['Euro Sortie'] || 0;
+            totalBanqueEuro += item['Banque Euro'] || 0;
+        });
+        
+        // Ligne total
+        html += '<tr class="total-row">';
+        html += ' <td class="category"><strong>TOTAL</strong> </td>';
+        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</strong> </td>`;
+        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</strong> </td>`;
+        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroEntree, 'Euro')}</strong> </td>`;
+        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroSortie, 'Euro')}</strong> </td>`;
+        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong> </td>`;
+        html += ' </tr>';
+        
+        html += '</tbody> </table>';
+        html += '</div>';
+        
+        // Solde net
+        const soldeAriary = totalAriaryEntree - totalAriarySortie;
+        const soldeEuro = totalEuroEntree - totalEuroSortie;
+        
+        html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
+        html += '<strong>📊 SOLDE NET :</strong><br>';
+        html += `🇲🇬 Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
+        html += `💶 Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}<br>`;
+        html += `🏦 Banque Euro : ${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}`;
+        html += '</div>';
+    }
+    
+    content.innerHTML = html;
+    
+    bulle.style.display = 'block';
+    overlay.style.display = 'block';
+    
+    // Centrer la bulle
+    const bulleWidth = bulle.offsetWidth;
+    const windowWidth = window.innerWidth;
+    let left = (windowWidth - bulleWidth) / 2;
+    if (left < 20) left = 20;
+    
+    bulle.style.left = left + 'px';
+    bulle.style.top = '20px';
+}<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
