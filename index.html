@@ -1878,7 +1878,7 @@
             }
         }
 
-       // Charger les détails des dépenses - VERSION QUI FONCTIONNAIT
+       // Charger les détails des dépenses - VERSION QUI LIT TOUTES LES LIGNES
 async function loadDetailsDepenses() {
     try {
         console.log('Chargement des détails des dépenses...');
@@ -1886,6 +1886,8 @@ async function loadDetailsDepenses() {
         if (response.ok) {
             const csvText = await response.text();
             const lines = parseCSV(csvText);
+            
+            console.log('📊 Nombre total de lignes:', lines.length);
             
             // Liste complète des catégories
             const categories = [
@@ -1900,12 +1902,15 @@ async function loadDetailsDepenses() {
                 detailsDepensesParCategorie[cat] = [];
             });
             
-            // Parcourir les lignes à partir de la ligne 3 (index 2)
-            for (let i = 2; i <= 30 && i < lines.length; i++) {  // ← MODIFIER 16 en 30
+            // MODIFICATION ICI : Parcourir TOUTES les lignes
+            for (let i = 2; i < lines.length; i++) {
                 const row = lines[i];
                 if (row && row.length >= 7) {
                     const libelle = row[0] ? row[0].trim() : '';
                     const categorie = row[1] ? row[1].trim() : '';
+                    
+                    // Ignorer les lignes vides
+                    if (!libelle && !categorie) continue;
                     
                     const categorieTrouvee = categories.find(cat => 
                         cat.toLowerCase() === categorie.toLowerCase()
@@ -1926,15 +1931,19 @@ async function loadDetailsDepenses() {
                             'Euro Sortie': euroSortie,
                             'Banque Euro': banqueEuro
                         });
+                        
+                        // Log pour voir ce qui est ajouté
+                        if (categorieTrouvee === 'Visa') {
+                            console.log(`   Ajouté Visa: ${libelle} - Sortie: ${ariarySortie} Ar`);
+                        }
                     }
                 }
             }
             
             console.log('✅ Détails dépenses chargés:');
             categories.forEach(cat => {
-                if (detailsDepensesParCategorie[cat] && detailsDepensesParCategorie[cat].length > 0) {
-                    console.log(`   - ${cat}: ${detailsDepensesParCategorie[cat].length} ligne(s)`);
-                }
+                const count = detailsDepensesParCategorie[cat] ? detailsDepensesParCategorie[cat].length : 0;
+                console.log(`   - ${cat}: ${count} ligne(s)`);
             });
             
         } else {
