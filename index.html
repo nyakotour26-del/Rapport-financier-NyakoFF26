@@ -1878,7 +1878,7 @@
             }
         }
 
-       // Charger les détails des dépenses - VERSION AMÉLIORÉE
+       // Charger les détails des dépenses - VERSION CORRIGÉE
 async function loadDetailsDepenses() {
     try {
         console.log('Chargement des détails des dépenses...');
@@ -1902,32 +1902,25 @@ async function loadDetailsDepenses() {
                 detailsDepensesParCategorie[cat] = [];
             });
             
-            // Variable pour stocker la catégorie courante
-            let currentCategory = '';
-            
-            // Parcourir TOUTES les lignes
-            for (let i = 0; i < lines.length; i++) {
+            // Parcourir TOUTES les lignes à partir de la ligne 3 (index 2)
+            for (let i = 2; i < lines.length; i++) {
                 const row = lines[i];
-                if (!row || row.length < 2) continue;
+                if (!row || row.length < 7) continue;
                 
-                const colA = row[0] ? row[0].trim() : '';
-                const colB = row[1] ? row[1].trim() : '';
+                // Colonne B (index 1) = Catégorie (ex: "Visa")
+                const categorie = row[1] ? row[1].trim() : '';
                 
-                // Vérifier si c'est un en-tête de catégorie (colonne A)
+                // Colonne A (index 0) = Libellé du détail (ex: "Assurances via shengen")
+                const libelle = row[0] ? row[0].trim() : '';
+                
+                // Vérifier si c'est une catégorie valide
                 const categorieTrouvee = categories.find(cat => 
-                    cat.toLowerCase() === colA.toLowerCase() ||
-                    colA.toLowerCase().includes(cat.toLowerCase())
+                    cat.toLowerCase() === categorie.toLowerCase()
                 );
                 
-                if (categorieTrouvee) {
-                    currentCategory = categorieTrouvee;
-                    console.log(`📁 Catégorie trouvée à ligne ${i}: ${currentCategory}`);
-                    continue;
-                }
-                
-                // Si on a une catégorie courante et que la ligne a des données
-                if (currentCategory && colB && colB !== '') {
-                    // Extraire les données
+                // Si on a une catégorie valide ET un libellé non vide
+                if (categorieTrouvee && libelle && libelle !== '') {
+                    // Extraire les données des colonnes C à G (index 2 à 6)
                     const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
                     const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
                     const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
@@ -1940,15 +1933,15 @@ async function loadDetailsDepenses() {
                                      banqueEuro !== 0;
                     
                     if (hasValue) {
-                        detailsDepensesParCategorie[currentCategory].push({
-                            'libelle': colB,
+                        detailsDepensesParCategorie[categorieTrouvee].push({
+                            'libelle': libelle,
                             'Ariary Entrée': ariaryEntree,
                             'Ariary Sortie': ariarySortie,
                             'Euro Entrée': euroEntree,
                             'Euro Sortie': euroSortie,
                             'Banque Euro': banqueEuro
                         });
-                        console.log(`   ✅ Ajouté à ${currentCategory}: ${colB}`);
+                        console.log(`✅ ${categorieTrouvee}: ${libelle} (${ariarySortie > 0 ? 'Sortie: ' + ariarySortie + ' Ar' : ''})`);
                     }
                 }
             }
@@ -1961,7 +1954,7 @@ async function loadDetailsDepenses() {
                 totalDetails += count;
                 console.log(`   - ${cat}: ${count} détail(s)`);
                 if (count > 0 && cat === 'Visa') {
-                    console.log(`     Détails Visa:`, detailsDepensesParCategorie[cat]);
+                    console.log(`     Détails Visa:`, detailsDepensesParCategorie[cat].map(d => d.libelle));
                 }
             });
             console.log(`📊 TOTAL: ${totalDetails} détails chargés`);
@@ -3093,78 +3086,96 @@ if (lines.length > 6) {
             bulle.style.top = '20px';
         }
 
-        function showCategorieDepense(event, categorie) {
-            event.stopPropagation();
+       function showCategorieDepense(event, categorie) {
+    event.stopPropagation();
+    
+    const bulle = document.getElementById('detailsBulle');
+    const overlay = document.getElementById('detailsOverlay');
+    const content = document.getElementById('detailsBulleContent');
+    const titleElement = document.getElementById('bulleTitle');
+    
+    titleElement.textContent = `📋 DÉTAILS ${categorie.toUpperCase()}`;
+    
+    let html = '';
+    
+    if (!detailsDepensesParCategorie[categorie] || detailsDepensesParCategorie[categorie].length === 0) {
+        html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
+    } else {
+        html = '<div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
+        html += '<div class="financial-table-container">';
+        html += '<table class="financial-table">';
+        html += '<thead>';
+        html += '<tr>';
+        html += '<th class="category">Libellé</th>';
+        html += '<th>Ariary Entrée</th>';
+        html += '<th>Ariary Sortie</th>';
+        html += '<th>Euro Entrée</th>';
+        html += '<th>Euro Sortie</th>';
+        html += '<th>Banque Euro</th>';
+        html += '</tr>';
+        html += '</thead>';
+        html += '<tbody>';
+        
+        let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
+        
+        // Afficher TOUS les détails
+        detailsDepensesParCategorie[categorie].forEach(item => {
+            html += '<tr>';
+            html += `<td class="category" style="text-align:left;">${item.libelle}</td>`;
+            html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'] || 0, 'Ariary')}</td>`;
+            html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'] || 0, 'Ariary')}</td>`;
+            html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'] || 0, 'Euro')}</td>`;
+            html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'] || 0, 'Euro')}</td>`;
+            html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'] || 0, 'Banque Euro')}</td>`;
+            html += '</tr>';
             
-            const bulle = document.getElementById('detailsBulle');
-            const overlay = document.getElementById('detailsOverlay');
-            const content = document.getElementById('detailsBulleContent');
-            const titleElement = document.getElementById('bulleTitle');
-            
-            titleElement.textContent = `📋 DÉTAILS ${categorie.toUpperCase()}`;
-            
-            let html = '';
-            
-            if (!detailsDepensesParCategorie[categorie] || detailsDepensesParCategorie[categorie].length === 0) {
-                html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
-            } else {
-                html = '<table>';
-                html += '<tr><th>Libellé</th><th>Ariary Entrée</th><th>Ariary Sortie</th><th>Euro Entrée</th><th>Euro Sortie</th><th>Banque Euro</th></tr>';
-                
-                let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
-                
-                detailsDepensesParCategorie[categorie].forEach(item => {
-                    html += '<tr>';
-                    html += `<td>${item.libelle}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'] || 0, 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'] || 0, 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'] || 0, 'Euro')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'] || 0, 'Euro')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'] || 0, 'Banque Euro')}</td>`;
-                    html += '</tr>';
-                    
-                    totalAriaryEntree += item['Ariary Entrée'] || 0;
-                    totalAriarySortie += item['Ariary Sortie'] || 0;
-                    totalEuroEntree += item['Euro Entrée'] || 0;
-                    totalEuroSortie += item['Euro Sortie'] || 0;
-                    totalBanqueEuro += item['Banque Euro'] || 0;
-                });
-                
-                html += '<tr class="total-row">';
-                html += '<td>TOTAL</td>';
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroEntree, 'Euro')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuroSortie, 'Euro')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</td>`;
-                html += '</tr>';
-                
-                html += '</table>';
-                
-                const soldeAriary = totalAriaryEntree - totalAriarySortie;
-                const soldeEuro = totalEuroEntree - totalEuroSortie;
-                
-                html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
-                html += '<strong>SOLDE NET :</strong><br>';
-                html += `Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
-                html += `Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}<br>`;
-                html += `Banque Euro : ${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}`;
-                html += '</div>';
-            }
-            
-            content.innerHTML = html;
-            
-            bulle.style.display = 'block';
-            overlay.style.display = 'block';
-            
-            const bulleWidth = bulle.offsetWidth;
-            const windowWidth = window.innerWidth;
-            let left = (windowWidth - bulleWidth) / 2;
-            if (left < 20) left = 20;
-            
-            bulle.style.left = left + 'px';
-            bulle.style.top = '20px';
-        }
+            totalAriaryEntree += item['Ariary Entrée'] || 0;
+            totalAriarySortie += item['Ariary Sortie'] || 0;
+            totalEuroEntree += item['Euro Entrée'] || 0;
+            totalEuroSortie += item['Euro Sortie'] || 0;
+            totalBanqueEuro += item['Banque Euro'] || 0;
+        });
+        
+        // Ligne total
+        html += '<tr class="total-row">';
+        html += '<td class="category"><strong>TOTAL</strong></td>';
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</strong></td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</strong></td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroEntree, 'Euro')}</strong></td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroSortie, 'Euro')}</strong></td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong></td>`;
+        html += '</tr>';
+        
+        html += '</tbody>';
+        html += '</table>';
+        html += '</div>';
+        
+        // Solde net
+        const soldeAriary = totalAriaryEntree - totalAriarySortie;
+        const soldeEuro = totalEuroEntree - totalEuroSortie;
+        
+        html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
+        html += '<strong>📊 SOLDE NET :</strong><br>';
+        html += `🇲🇬 Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
+        html += `💶 Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}<br>`;
+        html += `🏦 Banque Euro : ${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}`;
+        html += '</div>';
+    }
+    
+    content.innerHTML = html;
+    
+    bulle.style.display = 'block';
+    overlay.style.display = 'block';
+    
+    // Centrer la bulle
+    const bulleWidth = bulle.offsetWidth;
+    const windowWidth = window.innerWidth;
+    let left = (windowWidth - bulleWidth) / 2;
+    if (left < 20) left = 20;
+    
+    bulle.style.left = left + 'px';
+    bulle.style.top = '20px';
+}
         
         function showDetailsDepenses(event) {
             const bulle = document.getElementById('detailsBulle');
