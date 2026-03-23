@@ -4314,66 +4314,99 @@ html += '</tr>';
                 }
                 
                 // ============================================
-                // SECTION 3 : RÉCAPITULATIF DES DÉPENSES PAR CATÉGORIE
                 // ============================================
+// SECTION 3 : DÉTAILS COMPLETS DES DÉPENSES PAR RUBRIQUE
+// ============================================
+
+if (Object.keys(detailsDepensesParCategorie).length > 0) {
+    // Vérifier s'il y a des données
+    let aDesDonnees = false;
+    for (let cat in detailsDepensesParCategorie) {
+        if (detailsDepensesParCategorie[cat] && detailsDepensesParCategorie[cat].length > 0) {
+            aDesDonnees = true;
+            break;
+        }
+    }
+    
+    if (aDesDonnees) {
+        if (finalY > 170) {
+            doc.addPage();
+            finalY = 20;
+        } else {
+            finalY += 5;
+        }
+        
+        doc.setFontSize(14);
+        doc.setTextColor(231, 76, 60);
+        doc.text('DÉTAILS COMPLETS DES DÉPENSES PAR RUBRIQUE', 15, finalY);
+        finalY += 7;
+        
+        // Liste des rubriques
+        const rubriques = ['Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
+            'Frais bancaire', 'Logistique', 'Repetition', 'Nourritures&snack',
+            'Tenue', 'Soutien participants', 'Voiture & frais voyage',
+            'Vol&frais voyage', 'Sante', 'Visa'];
+        
+        for (let rubrique of rubriques) {
+            const details = detailsDepensesParCategorie[rubrique];
+            if (!details || details.length === 0) continue;
+            
+            // Nouvelle page si besoin
+            if (finalY > 220) {
+                doc.addPage();
+                finalY = 20;
+            }
+            
+            doc.setFontSize(12);
+            doc.setTextColor(52, 73, 94);
+            doc.text(`📁 ${rubrique.toUpperCase()}`, 15, finalY);
+            finalY += 5;
+            
+            // Préparer les données du tableau
+            const donneesTableau = [];
+            let totalArSortie = 0;
+            
+            for (let item of details) {
+                const libelle = item.libelle || '';
+                const arSortie = item['Ariary Sortie'] || 0;
+                const arEntree = item['Ariary Entrée'] || 0;
+                const euroSortie = item['Euro Sortie'] || 0;
+                const euroEntree = item['Euro Entrée'] || 0;
                 
-                if (detailsDepensesData.length > 0) {
-                    if (finalY > 180) {
-                        doc.addPage();
-                        finalY = 20;
-                    } else {
-                        finalY += 5;
-                    }
-                    
-                    doc.setFontSize(14);
-                    doc.setTextColor(231, 76, 60);
-                    doc.text('RÉCAPITULATIF DES DÉPENSES PAR CATÉGORIE', 15, finalY);
-                    
-                    finalY += 7;
-                    
-                    const depensesHeaders = [['Catégorie', 'Ariary', 'Euro', 'Franc Suisse', 'Livre', 'Banque Euro']];
-                    const depensesData = [];
-                    
-                    let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanque = 0;
-                    
-                    detailsDepensesData.forEach(item => {
-                        depensesData.push([
-                            item['Depenses'],
-                            formatNumberForPDF(item['Ariary'], 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
-                            formatNumberForPDF(item['Euro'], 'Euro') + ' ' + getCurrencySymbol('Euro'),
-                            formatNumberForPDF(item['Franc Suisse'], 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'),
-                            formatNumberForPDF(item['Livre'], 'Livre') + ' ' + getCurrencySymbol('Livre'),
-                            formatNumberForPDF(item['Banque Euro'], 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
-                        ]);
-                        
-                        totalAriary += item['Ariary'];
-                        totalEuro += item['Euro'];
-                        totalFrancSuisse += item['Franc Suisse'];
-                        totalLivre += item['Livre'];
-                        totalBanque += item['Banque Euro'];
-                    });
-                    
-                    depensesData.push([
-                        { content: 'TOTAL DÉPENSES (somme colonnes)', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                        { content: formatNumberForPDF(totalAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                        { content: formatNumberForPDF(totalEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                        { content: formatNumberForPDF(totalFrancSuisse, 'Franc Suisse') + ' ' + getCurrencySymbol('Franc Suisse'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                        { content: formatNumberForPDF(totalLivre, 'Livre') + ' ' + getCurrencySymbol('Livre'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                        { content: formatNumberForPDF(totalBanque, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
-                    ]);
-                    
-                    doc.autoTable({
-                        head: depensesHeaders,
-                        body: depensesData,
-                        startY: finalY + 2,
-                        theme: 'striped',
-                        headStyles: { fillColor: [231, 76, 60], textColor: 255 },
-                        styles: { fontSize: 8, cellPadding: 2, halign: 'right' },
-                        columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } }
-                    });
-                    
-                    finalY = doc.lastAutoTable.finalY + 10;
-                }
+                totalArSortie += arSortie;
+                
+                donneesTableau.push([
+                    libelle,
+                    formatNumberForPDF(arEntree, 'Ariary') + ' Ar',
+                    formatNumberForPDF(arSortie, 'Ariary') + ' Ar',
+                    formatNumberForPDF(euroEntree, 'Euro') + ' €',
+                    formatNumberForPDF(euroSortie, 'Euro') + ' €'
+                ]);
+            }
+            
+            // Ajouter total
+            donneesTableau.push([
+                'TOTAL',
+                '',
+                formatNumberForPDF(totalArSortie, 'Ariary') + ' Ar',
+                '',
+                ''
+            ]);
+            
+            doc.autoTable({
+                head: [['Libellé', 'Entrée Ar', 'Sortie Ar', 'Entrée €', 'Sortie €']],
+                body: donneesTableau,
+                startY: finalY,
+                theme: 'striped',
+                headStyles: { fillColor: [52, 152, 219], textColor: 255 },
+                styles: { fontSize: 8, cellPadding: 2 },
+                columnStyles: { 0: { cellWidth: 50, halign: 'left' } }
+            });
+            
+            finalY = doc.lastAutoTable.finalY + 5;
+        }
+    }
+}
                 
                 // ============================================
                 // SECTION 4 : DÉTAILS DES VENTES
@@ -4624,136 +4657,8 @@ html += '</tr>';
                         finalY = doc.lastAutoTable.finalY + 10;
                     }
                 }
-          // ============================================
-// SECTION : DÉTAILS DES DÉPENSES PAR RUBRIQUE
-// ============================================
 
-if (Object.keys(detailsDepensesParCategorie).length > 0) {
-    // Vérifier s'il y a au moins une catégorie avec des données
-    let hasData = false;
-    for (let cat in detailsDepensesParCategorie) {
-        if (detailsDepensesParCategorie[cat] && detailsDepensesParCategorie[cat].length > 0) {
-            hasData = true;
-            break;
-        }
-    }
-    
-    if (hasData) {
-        // Ajouter une nouvelle page si nécessaire
-        if (finalY > 170) {
-            doc.addPage();
-            finalY = 20;
-        } else {
-            finalY += 10;
-        }
-        
-        doc.setFontSize(16);
-        doc.setTextColor(231, 76, 60);
-        doc.text('DÉTAILS DES DÉPENSES PAR RUBRIQUE', 15, finalY);
-        finalY += 7;
-        
-        // Parcourir chaque catégorie
-        const categoriesOrdre = [
-            'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
-            'Frais bancaire', 'Logistique', 'Repetition', 'Nourritures&snack',
-            'Tenue', 'Soutien participants', 'Voiture & frais voyage',
-            'Vol&frais voyage', 'Sante', 'Visa'
-        ];
-        
-        for (let cat of categoriesOrdre) {
-            const details = detailsDepensesParCategorie[cat];
-            if (!details || details.length === 0) continue;
-            
-            // Vérifier l'espace sur la page
-            if (finalY > 220) {
-                doc.addPage();
-                finalY = 20;
-            }
-            
-            finalY += 5;
-            doc.setFontSize(14);
-            doc.setTextColor(52, 73, 94);
-            doc.text(`📁 ${cat.toUpperCase()}`, 15, finalY);
-            finalY += 5;
-            
-            // Préparer les données pour le tableau
-            const headers = [['Libellé', 'Ariary Entrée', 'Ariary Sortie', 'Euro Entrée', 'Euro Sortie', 'Banque Euro']];
-            const tableData = [];
-            
-            let totalAriaryEntree = 0, totalAriarySortie = 0;
-            let totalEuroEntree = 0, totalEuroSortie = 0;
-            let totalBanqueEuro = 0;
-            
-            details.forEach(item => {
-                const ariaryEntree = item['Ariary Entrée'] || 0;
-                const ariarySortie = item['Ariary Sortie'] || 0;
-                const euroEntree = item['Euro Entrée'] || 0;
-                const euroSortie = item['Euro Sortie'] || 0;
-                const banqueEuro = item['Banque Euro'] || 0;
                 
-                tableData.push([
-                    item.libelle,
-                    formatNumberForPDF(ariaryEntree, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
-                    formatNumberForPDF(ariarySortie, 'Ariary') + ' ' + getCurrencySymbol('Ariary'),
-                    formatNumberForPDF(euroEntree, 'Euro') + ' ' + getCurrencySymbol('Euro'),
-                    formatNumberForPDF(euroSortie, 'Euro') + ' ' + getCurrencySymbol('Euro'),
-                    formatNumberForPDF(banqueEuro, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro')
-                ]);
-                
-                totalAriaryEntree += ariaryEntree;
-                totalAriarySortie += ariarySortie;
-                totalEuroEntree += euroEntree;
-                totalEuroSortie += euroSortie;
-                totalBanqueEuro += banqueEuro;
-            });
-            
-            // Ligne total
-            tableData.push([
-                { content: 'TOTAL', styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                { content: formatNumberForPDF(totalAriaryEntree, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                { content: formatNumberForPDF(totalAriarySortie, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                { content: formatNumberForPDF(totalEuroEntree, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                { content: formatNumberForPDF(totalEuroSortie, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } },
-                { content: formatNumberForPDF(totalBanqueEuro, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [255, 165, 0], textColor: 0, fontStyle: 'bold' } }
-            ]);
-            
-            // Solde net
-            const soldeAriary = totalAriaryEntree - totalAriarySortie;
-            const soldeEuro = totalEuroEntree - totalEuroSortie;
-            
-            // Ajouter une ligne d'information sur le solde
-            tableData.push([
-                { content: 'SOLDE NET', styles: { fillColor: [209, 236, 241], fontStyle: 'bold' } },
-                { content: formatNumberForPDF(soldeAriary, 'Ariary') + ' ' + getCurrencySymbol('Ariary'), styles: { fillColor: [209, 236, 241] } },
-                { content: '', styles: { fillColor: [209, 236, 241] } },
-                { content: formatNumberForPDF(soldeEuro, 'Euro') + ' ' + getCurrencySymbol('Euro'), styles: { fillColor: [209, 236, 241] } },
-                { content: '', styles: { fillColor: [209, 236, 241] } },
-                { content: formatNumberForPDF(totalBanqueEuro, 'Banque Euro') + ' ' + getCurrencySymbol('Banque Euro'), styles: { fillColor: [209, 236, 241] } }
-            ]);
-            
-            // Générer le tableau
-            doc.autoTable({
-                head: headers,
-                body: tableData,
-                startY: finalY,
-                theme: 'striped',
-                headStyles: { fillColor: [52, 152, 219], textColor: 255, fontStyle: 'bold' },
-                styles: { fontSize: 7, cellPadding: 2, halign: 'right' },
-                columnStyles: { 
-                    0: { halign: 'left', cellWidth: 45, fontStyle: 'bold' },
-                    1: { cellWidth: 28 },
-                    2: { cellWidth: 28 },
-                    3: { cellWidth: 28 },
-                    4: { cellWidth: 28 },
-                    5: { cellWidth: 28 }
-                },
-                margin: { left: 10, right: 10 }
-            });
-            
-            finalY = doc.lastAutoTable.finalY + 5;
-        }
-    }
-}      
                 // ============================================
                 // SECTION 7 : DÉTAILS EMPRUNTS ET PRÊTS
                 // ============================================
