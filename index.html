@@ -1878,7 +1878,7 @@
             }
         }
 
-       // Charger les détails des dépenses - VERSION AVEC DIAGNOSTIC
+       // Charger les détails des dépenses - VERSION QUI FONCTIONNAIT
 async function loadDetailsDepenses() {
     try {
         console.log('Chargement des détails des dépenses...');
@@ -1886,29 +1886,6 @@ async function loadDetailsDepenses() {
         if (response.ok) {
             const csvText = await response.text();
             const lines = parseCSV(csvText);
-            
-            console.log('📊 Nombre total de lignes:', lines.length);
-            
-            // AFFICHER TOUTES LES LIGNES QUI CONTIENNENT "Visa"
-            console.log('\n=== RECHERCHE DES LIGNES AVEC "Visa" ===');
-            for (let i = 0; i < lines.length; i++) {
-                const row = lines[i];
-                if (row && row.length >= 2) {
-                    const colA = row[0] ? row[0].trim() : '';
-                    const colB = row[1] ? row[1].trim() : '';
-                    if (colB.toLowerCase() === 'visa' || colA.toLowerCase().includes('visa')) {
-                        console.log(`Ligne ${i}:`, {
-                            colonneA: colA,
-                            colonneB: colB,
-                            colonneC: row[2],
-                            colonneD: row[3],
-                            colonneE: row[4],
-                            colonneF: row[5],
-                            colonneG: row[6]
-                        });
-                    }
-                }
-            }
             
             // Liste complète des catégories
             const categories = [
@@ -1923,45 +1900,41 @@ async function loadDetailsDepenses() {
                 detailsDepensesParCategorie[cat] = [];
             });
             
-            // Parcourir TOUTES les lignes
-            for (let i = 2; i < lines.length; i++) {
+            // Parcourir les lignes à partir de la ligne 3 (index 2)
+            for (let i = 2; i <= 30 && i < lines.length; i++) {  // ← MODIFIER 16 en 30
                 const row = lines[i];
-                if (!row || row.length < 7) continue;
-                
-                const libelle = row[0] ? row[0].trim() : '';
-                const categorie = row[1] ? row[1].trim() : '';
-                
-                if (!libelle && !categorie) continue;
-                
-                // Vérifier si c'est une catégorie valide (comparaison insensible à la casse)
-                const categorieTrouvee = categories.find(cat => 
-                    cat.toLowerCase() === categorie.toLowerCase()
-                );
-                
-                if (categorieTrouvee && libelle) {
-                    const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
-                    const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
-                    const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
-                    const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
-                    const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
+                if (row && row.length >= 7) {
+                    const libelle = row[0] ? row[0].trim() : '';
+                    const categorie = row[1] ? row[1].trim() : '';
                     
-                    detailsDepensesParCategorie[categorieTrouvee].push({
-                        'libelle': libelle,
-                        'Ariary Entrée': ariaryEntree,
-                        'Ariary Sortie': ariarySortie,
-                        'Euro Entrée': euroEntree,
-                        'Euro Sortie': euroSortie,
-                        'Banque Euro': banqueEuro
-                    });
+                    const categorieTrouvee = categories.find(cat => 
+                        cat.toLowerCase() === categorie.toLowerCase()
+                    );
                     
-                    console.log(`✅ Ajouté à ${categorieTrouvee}: ${libelle}`);
+                    if (categorieTrouvee && libelle && libelle !== '') {
+                        const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
+                        const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
+                        const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
+                        const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
+                        const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
+                        
+                        detailsDepensesParCategorie[categorieTrouvee].push({
+                            'libelle': libelle,
+                            'Ariary Entrée': ariaryEntree,
+                            'Ariary Sortie': ariarySortie,
+                            'Euro Entrée': euroEntree,
+                            'Euro Sortie': euroSortie,
+                            'Banque Euro': banqueEuro
+                        });
+                    }
                 }
             }
             
-            console.log('\n✅ RÉSULTAT FINAL:');
+            console.log('✅ Détails dépenses chargés:');
             categories.forEach(cat => {
-                const count = detailsDepensesParCategorie[cat] ? detailsDepensesParCategorie[cat].length : 0;
-                console.log(`   - ${cat}: ${count} ligne(s)`);
+                if (detailsDepensesParCategorie[cat] && detailsDepensesParCategorie[cat].length > 0) {
+                    console.log(`   - ${cat}: ${detailsDepensesParCategorie[cat].length} ligne(s)`);
+                }
             });
             
         } else {
