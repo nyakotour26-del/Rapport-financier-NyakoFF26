@@ -1878,7 +1878,7 @@
             }
         }
 
-       // Charger les détails des dépenses - VERSION QUI LIT TOUTES LES LIGNES
+       // Charger les détails des dépenses - VERSION DIAGNOSTIC
 async function loadDetailsDepenses() {
     try {
         console.log('Chargement des détails des dépenses...');
@@ -1889,7 +1889,16 @@ async function loadDetailsDepenses() {
             
             console.log('📊 Nombre total de lignes:', lines.length);
             
-            // Liste complète des catégories
+            // AFFICHER TOUTES LES LIGNES POUR VOIR LA STRUCTURE
+            console.log('\n=== STRUCTURE DU FICHIER ===');
+            for (let i = 0; i < Math.min(40, lines.length); i++) {
+                const row = lines[i];
+                if (row) {
+                    console.log(`Ligne ${i}: [A]="${row[0] || ''}" | [B]="${row[1] || ''}" | [C]="${row[2] || ''}" | [D]="${row[3] || ''}"`);
+                }
+            }
+            
+            // Liste des catégories
             const categories = [
                 'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
                 'Frais bancaire', 'Logistique', 'Repetition', 'Nourritures&snack',
@@ -1897,53 +1906,72 @@ async function loadDetailsDepenses() {
                 'Vol&frais voyage', 'Sante', 'Visa'
             ];
             
-            // Réinitialiser les données
+            // Réinitialiser
             categories.forEach(cat => {
                 detailsDepensesParCategorie[cat] = [];
             });
             
-            // MODIFICATION ICI : Parcourir TOUTES les lignes
+            // Parcourir TOUTES les lignes
             for (let i = 2; i < lines.length; i++) {
                 const row = lines[i];
-                if (row && row.length >= 7) {
-                    const libelle = row[0] ? row[0].trim() : '';
-                    const categorie = row[1] ? row[1].trim() : '';
+                if (!row) continue;
+                
+                const libelle = row[0] ? row[0].trim() : '';
+                const categorie = row[1] ? row[1].trim() : '';
+                
+                // Afficher chaque ligne qui pourrait être Visa
+                if (libelle && libelle !== '' && (categorie.toLowerCase() === 'visa' || libelle.toLowerCase().includes('visa'))) {
+                    console.log(`🔍 Ligne ${i}: libelle="${libelle}", categorie="${categorie}"`);
+                    console.log(`   Données: C="${row[2]}", D="${row[3]}", E="${row[4]}", F="${row[5]}", G="${row[6]}"`);
+                }
+                
+                // Chercher la catégorie (même si elle n'est pas exactement "Visa")
+                let categorieTrouvee = null;
+                
+                // Vérifier si la colonne B contient une catégorie valide
+                categorieTrouvee = categories.find(cat => 
+                    cat.toLowerCase() === categorie.toLowerCase()
+                );
+                
+                // Si pas trouvé mais que le libellé contient "visa", on le met dans Visa
+                if (!categorieTrouvee && libelle && libelle.toLowerCase().includes('visa')) {
+                    categorieTrouvee = 'Visa';
+                    console.log(`   → Assigné à Visa car libellé contient "visa"`);
+                }
+                
+                if (categorieTrouvee && libelle && libelle !== '') {
+                    const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
+                    const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
+                    const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
+                    const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
+                    const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
                     
-                    // Ignorer les lignes vides
-                    if (!libelle && !categorie) continue;
+                    detailsDepensesParCategorie[categorieTrouvee].push({
+                        'libelle': libelle,
+                        'Ariary Entrée': ariaryEntree,
+                        'Ariary Sortie': ariarySortie,
+                        'Euro Entrée': euroEntree,
+                        'Euro Sortie': euroSortie,
+                        'Banque Euro': banqueEuro
+                    });
                     
-                    const categorieTrouvee = categories.find(cat => 
-                        cat.toLowerCase() === categorie.toLowerCase()
-                    );
-                    
-                    if (categorieTrouvee && libelle && libelle !== '') {
-                        const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
-                        const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
-                        const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
-                        const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
-                        const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
-                        
-                        detailsDepensesParCategorie[categorieTrouvee].push({
-                            'libelle': libelle,
-                            'Ariary Entrée': ariaryEntree,
-                            'Ariary Sortie': ariarySortie,
-                            'Euro Entrée': euroEntree,
-                            'Euro Sortie': euroSortie,
-                            'Banque Euro': banqueEuro
-                        });
-                        
-                        // Log pour voir ce qui est ajouté
-                        if (categorieTrouvee === 'Visa') {
-                            console.log(`   Ajouté Visa: ${libelle} - Sortie: ${ariarySortie} Ar`);
-                        }
+                    if (categorieTrouvee === 'Visa') {
+                        console.log(`✅ Ajouté: ${libelle}`);
                     }
                 }
             }
             
-            console.log('✅ Détails dépenses chargés:');
+            console.log('\n✅ RÉSULTAT FINAL:');
             categories.forEach(cat => {
                 const count = detailsDepensesParCategorie[cat] ? detailsDepensesParCategorie[cat].length : 0;
-                console.log(`   - ${cat}: ${count} ligne(s)`);
+                if (count > 0) {
+                    console.log(`   - ${cat}: ${count} ligne(s)`);
+                    if (cat === 'Visa') {
+                        detailsDepensesParCategorie[cat].forEach((d, idx) => {
+                            console.log(`     ${idx+1}. ${d.libelle}`);
+                        });
+                    }
+                }
             });
             
         } else {
