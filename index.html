@@ -1,89 +1,4 @@
-function showCategorieDepense(event, categorie) {
-    event.stopPropagation();
-    
-    const bulle = document.getElementById('detailsBulle');
-    const overlay = document.getElementById('detailsOverlay');
-    const content = document.getElementById('detailsBulleContent');
-    const titleElement = document.getElementById('bulleTitle');
-    
-    titleElement.textContent = `📋 DÉTAILS ${categorie.toUpperCase()}`;
-    
-    let html = '';
-    
-    if (!detailsDepensesParCategorie[categorie] || detailsDepensesParCategorie[categorie].length === 0) {
-        html = '<p style="text-align:center;color:#e74c3c;">Aucune donnée détaillée disponible</p>';
-    } else {
-        html = ' <div class="scroll-hint">Faites défiler horizontalement pour voir toutes les colonnes</div>';
-        html += ' <div class="financial-table-container">';
-        html += '<table class="financial-table">';
-        html += ' <thead> <tr>';
-        html += ' <th>Libellé</th>';
-        html += ' <th>Ariary Entrée</th>';
-        html += ' <th>Ariary Sortie</th>';
-        html += ' <th>Euro Entrée</th>';
-        html += ' <th>Euro Sortie</th>';
-        html += ' <th>Banque Euro</th>';
-        html += ' </tr> </thead> <tbody>';
-        
-        let totalAriaryEntree = 0, totalAriarySortie = 0, totalEuroEntree = 0, totalEuroSortie = 0, totalBanqueEuro = 0;
-        
-        // Afficher TOUS les détails sans limite
-        detailsDepensesParCategorie[categorie].forEach(item => {
-            html += ' <tr>';
-            html += ` <td class="category">${item.libelle} </td>`;
-            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Ariary Entrée'] || 0, 'Ariary')} </td>`;
-            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Ariary Sortie'] || 0, 'Ariary')} </td>`;
-            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Euro Entrée'] || 0, 'Euro')} </td>`;
-            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Euro Sortie'] || 0, 'Euro')} </td>`;
-            html += ` <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'] || 0, 'Banque Euro')} </td>`;
-            html += ' </tr>';
-            
-            totalAriaryEntree += item['Ariary Entrée'] || 0;
-            totalAriarySortie += item['Ariary Sortie'] || 0;
-            totalEuroEntree += item['Euro Entrée'] || 0;
-            totalEuroSortie += item['Euro Sortie'] || 0;
-            totalBanqueEuro += item['Banque Euro'] || 0;
-        });
-        
-        // Ligne total
-        html += '<tr class="total-row">';
-        html += ' <td class="category"><strong>TOTAL</strong> </td>';
-        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</strong> </td>`;
-        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</strong> </td>`;
-        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroEntree, 'Euro')}</strong> </td>`;
-        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalEuroSortie, 'Euro')}</strong> </td>`;
-        html += ` <td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong> </td>`;
-        html += ' </tr>';
-        
-        html += '</tbody> </table>';
-        html += '</div>';
-        
-        // Solde net
-        const soldeAriary = totalAriaryEntree - totalAriarySortie;
-        const soldeEuro = totalEuroEntree - totalEuroSortie;
-        
-        html += '<div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-radius: 5px;">';
-        html += '<strong>📊 SOLDE NET :</strong><br>';
-        html += `🇲🇬 Ariary : ${formatNumberWithUnit(soldeAriary, 'Ariary')}<br>`;
-        html += `💶 Euro : ${formatNumberWithUnit(soldeEuro, 'Euro')}<br>`;
-        html += `🏦 Banque Euro : ${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}`;
-        html += '</div>';
-    }
-    
-    content.innerHTML = html;
-    
-    bulle.style.display = 'block';
-    overlay.style.display = 'block';
-    
-    // Centrer la bulle
-    const bulleWidth = bulle.offsetWidth;
-    const windowWidth = window.innerWidth;
-    let left = (windowWidth - bulleWidth) / 2;
-    if (left < 20) left = 20;
-    
-    bulle.style.left = left + 'px';
-    bulle.style.top = '20px';
-}<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -1963,69 +1878,101 @@ function showCategorieDepense(event, categorie) {
             }
         }
 
-        // Charger les détails des dépenses
-        async function loadDetailsDepenses() {
-            try {
-                console.log('Chargement des détails des dépenses...');
-                const response = await fetch(DETAILS_DEPENSES_URL);
-                if (response.ok) {
-                    const csvText = await response.text();
-                    const lines = parseCSV(csvText);
-                    
-                    const categories = [
-                        'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
-                        'Frais bancaire', 'Logistique', 'Répetition', 'Nourritures&snack',
-                        'Tenue', 'Soutien participants', 'Voiture & frais voyage',
-                        'Vol&frais voyage', 'Santé', 'Visa'
-                    ];
-                    
-                    categories.forEach(cat => {
-                        detailsDepensesParCategorie[cat] = [];
-                    });
-                    
-                    for (let i = 2; i < lines.length && i < 17; i++) {
-                        const row = lines[i];
-                        if (row && row.length >= 7) {
-                            const libelle = row[1] ? row[1].trim() : '';
-                            
-                            if (libelle && libelle !== '') {
-                                const categorieTrouvee = categories.find(cat => 
-                                    cat.toLowerCase() === libelle.toLowerCase() ||
-                                    cat.includes(libelle) ||
-                                    libelle.includes(cat)
-                                );
-                                
-                                if (categorieTrouvee) {
-                                    const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
-                                    const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
-                                    const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
-                                    const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
-                                    const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
-                                    
-                                    if (ariaryEntree > 0 || ariarySortie > 0 || euroEntree > 0 || euroSortie > 0 || banqueEuro > 0) {
-                                        detailsDepensesParCategorie[categorieTrouvee].push({
-                                            'libelle': libelle,
-                                            'Ariary Entrée': ariaryEntree,
-                                            'Ariary Sortie': ariarySortie,
-                                            'Euro Entrée': euroEntree,
-                                            'Euro Sortie': euroSortie,
-                                            'Banque Euro': banqueEuro
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    
-                    console.log('✅ Détails dépenses chargés:', Object.keys(detailsDepensesParCategorie).length, 'catégories');
-                    
-                } else {
-                    console.error('Erreur chargement détails dépenses:', response.status);
+       // Charger les détails des dépenses - VERSION AMÉLIORÉE
+async function loadDetailsDepenses() {
+    try {
+        console.log('Chargement des détails des dépenses...');
+        const response = await fetch(DETAILS_DEPENSES_URL);
+        if (response.ok) {
+            const csvText = await response.text();
+            const lines = parseCSV(csvText);
+            
+            console.log('📊 Nombre total de lignes chargées:', lines.length);
+            
+            // Liste des catégories principales
+            const categories = [
+                'Admin', 'Artisanat', 'Cadeaux', 'Eglise', 'Fournitures et divers',
+                'Frais bancaire', 'Logistique', 'Repetition', 'Nourritures&snack',
+                'Tenue', 'Soutien participants', 'Voiture & frais voyage',
+                'Vol&frais voyage', 'Sante', 'Visa'
+            ];
+            
+            // Réinitialiser les données
+            categories.forEach(cat => {
+                detailsDepensesParCategorie[cat] = [];
+            });
+            
+            // Variable pour stocker la catégorie courante
+            let currentCategory = '';
+            
+            // Parcourir TOUTES les lignes
+            for (let i = 0; i < lines.length; i++) {
+                const row = lines[i];
+                if (!row || row.length < 2) continue;
+                
+                const colA = row[0] ? row[0].trim() : '';
+                const colB = row[1] ? row[1].trim() : '';
+                
+                // Vérifier si c'est un en-tête de catégorie (colonne A)
+                const categorieTrouvee = categories.find(cat => 
+                    cat.toLowerCase() === colA.toLowerCase() ||
+                    colA.toLowerCase().includes(cat.toLowerCase())
+                );
+                
+                if (categorieTrouvee) {
+                    currentCategory = categorieTrouvee;
+                    console.log(`📁 Catégorie trouvée à ligne ${i}: ${currentCategory}`);
+                    continue;
                 }
-            } catch (error) {
-                console.error('❌ Erreur chargement détails dépenses:', error);
+                
+                // Si on a une catégorie courante et que la ligne a des données
+                if (currentCategory && colB && colB !== '') {
+                    // Extraire les données
+                    const ariaryEntree = parseFloat(cleanNumber(row[2] || '0'));
+                    const ariarySortie = parseFloat(cleanNumber(row[3] || '0'));
+                    const euroEntree = parseFloat(cleanNumber(row[4] || '0'));
+                    const euroSortie = parseFloat(cleanNumber(row[5] || '0'));
+                    const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
+                    
+                    // Vérifier s'il y a au moins une valeur non nulle
+                    const hasValue = ariaryEntree !== 0 || ariarySortie !== 0 || 
+                                     euroEntree !== 0 || euroSortie !== 0 || 
+                                     banqueEuro !== 0;
+                    
+                    if (hasValue) {
+                        detailsDepensesParCategorie[currentCategory].push({
+                            'libelle': colB,
+                            'Ariary Entrée': ariaryEntree,
+                            'Ariary Sortie': ariarySortie,
+                            'Euro Entrée': euroEntree,
+                            'Euro Sortie': euroSortie,
+                            'Banque Euro': banqueEuro
+                        });
+                        console.log(`   ✅ Ajouté à ${currentCategory}: ${colB}`);
+                    }
+                }
             }
+            
+            // Afficher le résumé
+            console.log('✅ Détails dépenses chargés:');
+            let totalDetails = 0;
+            categories.forEach(cat => {
+                const count = detailsDepensesParCategorie[cat] ? detailsDepensesParCategorie[cat].length : 0;
+                totalDetails += count;
+                console.log(`   - ${cat}: ${count} détail(s)`);
+                if (count > 0 && cat === 'Visa') {
+                    console.log(`     Détails Visa:`, detailsDepensesParCategorie[cat]);
+                }
+            });
+            console.log(`📊 TOTAL: ${totalDetails} détails chargés`);
+            
+        } else {
+            console.error('Erreur chargement détails dépenses:', response.status);
         }
+    } catch (error) {
+        console.error('❌ Erreur chargement détails dépenses:', error);
+    }
+}
 
         // Charger les détails depuis la feuille principale
         async function loadDetailsFromMainSheet() {
