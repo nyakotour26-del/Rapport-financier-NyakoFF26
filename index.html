@@ -2135,36 +2135,21 @@
                         }
                     }
                     
-                    // ============ EMPRUNT (ligne 4, colonnes Q-U) ============
-                    if (lines.length > 3) {
-                        const ligne4 = lines[3];
-                        if (ligne4 && ligne4.length >= 21) {
-                            detailsEmpruntData.montant = {
-                                'Ariary': parseFloat(cleanNumber(ligne4[16] || '0')),
-                                'Euro': parseFloat(cleanNumber(ligne4[17] || '0')),
-                                'Franc Suisse': parseFloat(cleanNumber(ligne4[18] || '0')),
-                                'Livre': parseFloat(cleanNumber(ligne4[19] || '0')),
-                                'Banque Euro': parseFloat(cleanNumber(ligne4[20] || '0'))
-                            };
-                            
-                            detailsEmpruntData.remboursement = {
-                                'Ariary': parseFloat(cleanNumber(ligne4[9] || '0')),
-                                'Euro': parseFloat(cleanNumber(ligne4[10] || '0')),
-                                'Franc Suisse': parseFloat(cleanNumber(ligne4[11] || '0')),
-                                'Livre': parseFloat(cleanNumber(ligne4[12] || '0')),
-                                'Banque Euro': parseFloat(cleanNumber(ligne4[13] || '0'))
-                            };
-                            
-                            autresSourcesData['Emprunt'] = {
-                                'Ariary': detailsEmpruntData.montant.Ariary - detailsEmpruntData.remboursement.Ariary,
-                                'Euro': detailsEmpruntData.montant.Euro - detailsEmpruntData.remboursement.Euro,
-                                'Franc Suisse': detailsEmpruntData.montant['Franc Suisse'] - detailsEmpruntData.remboursement['Franc Suisse'],
-                                'Livre': detailsEmpruntData.montant.Livre - detailsEmpruntData.remboursement.Livre,
-                                'Banque Euro': detailsEmpruntData.montant['Banque Euro'] - detailsEmpruntData.remboursement['Banque Euro']
-                            };
-                            console.log('✅ Emprunt (ligne 4) chargé depuis Q4:U4');
-                        }
-                    }
+                   // ============ EMPRUNT (ligne 4, colonnes Q-U) ============
+if (lines.length > 3) {
+    const ligne4 = lines[3];
+    if (ligne4 && ligne4.length >= 21) {
+        // Prendre UNIQUEMENT les valeurs de Q4, R4, S4, T4, U4 (sans calcul)
+        autresSourcesData['Emprunt'] = {
+            'Ariary': parseFloat(cleanNumber(ligne4[16] || '0')),
+            'Euro': parseFloat(cleanNumber(ligne4[17] || '0')),
+            'Franc Suisse': parseFloat(cleanNumber(ligne4[18] || '0')),
+            'Livre': parseFloat(cleanNumber(ligne4[19] || '0')),
+            'Banque Euro': parseFloat(cleanNumber(ligne4[20] || '0'))
+        };
+        console.log('✅ Emprunt (ligne 4) - Valeurs brutes Q4:U4:', autresSourcesData['Emprunt']);
+    }
+}
                     
                   // ============ PRÊT (ligne 6, colonnes Q-U) ============
 if (lines.length > 5) {
@@ -3534,16 +3519,18 @@ if (lines.length > 6) {
             });
             html += ' </tr>';
             
-            html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
-            Object.keys(columnMapping).forEach(currency => {
-                const fondsPropresValue = fondsPropres[currency];
-                const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                
-                const enMain = fondsPropresValue + emprunt - transfert;
-                html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
-            });
-            html += ' </tr>';
+           html += '<tr class="en-main-row"><td class="category">EN MAIN</td>';
+Object.keys(columnMapping).forEach(currency => {
+    const fondsPropresValue = fondsPropres[currency];
+    const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
+    const pret = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
+    const transfert = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
+    const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
+    
+    const enMain = fondsPropresValue + emprunt + pret + transfert + change;
+    html += `<td>${formatNumberWithUnit(enMain, currency)}</td>`;
+});
+html += '</tr>';
             
             html += '</tbody></table>';
             
