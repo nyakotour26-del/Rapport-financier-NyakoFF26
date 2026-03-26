@@ -1386,8 +1386,7 @@
         const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
         const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
-        // NOUVELLE SOURCE POUR LA LISTE DES PRÊTEURS
-const LISTE_PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&single=true&output=csv';
+        const PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pubhtml?gid=389673297&single=true&output=csv';
         const CORRECT_PASSWORD = 'finadmin';
         
         let sheetData = [];
@@ -1959,7 +1958,70 @@ const LISTE_PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF
                 console.error('❌ Erreur chargement dons membres:', error);
             }
         }
-
+// Nouvelle fonction pour charger la liste des prêteurs depuis la nouvelle feuille
+async function loadPreteurs() {
+    try {
+        console.log('Chargement de la feuille des prêteurs...');
+        const response = await fetch(PRETEURS_URL);
+        
+        if (!response.ok) {
+            throw new Error(`Erreur chargement prêteurs: ${response.status}`);
+        }
+        
+        const csvText = await response.text();
+        const lines = parseCSV(csvText);
+        
+        console.log('📊 Feuille prêteurs - Nombre de lignes:', lines.length);
+        
+        // Réinitialiser les données des prêteurs
+        detailsEmpruntTiersData = [];
+        
+        // Parcourir les lignes à partir de la ligne 4 (index 3) car ligne 1 à 3 sont des en-têtes
+        for (let i = 3; i < lines.length; i++) {
+            const row = lines[i];
+            if (!row) continue;
+            
+            const nom = row[0] ? row[0].trim() : '';  // Colonne A (index 0) = noms des prêteurs
+            
+            // Ignorer les lignes vides
+            if (!nom || nom === '') continue;
+            
+            // Lecture des montants selon votre description :
+            // Colonne B (index 1): valeurs en ariary des emprunts
+            // Colonne C (index 2): valeur convertie en euro des emprunts en ariary
+            // Colonne D (index 3): valeur des emprunts en euro
+            // Colonne E (index 4): valeur en CHF
+            // Colonne F (index 5): valeur en GBP
+            // Colonne G (index 6): valeur en banque euro
+            // Colonne H (index 7): total en euro après conversion (on ne l'utilise pas)
+            
+            const ariary = parseFloat(cleanNumber(row[1] || '0'));      // Colonne B
+            const euro = parseFloat(cleanNumber(row[3] || '0'));        // Colonne D (euro direct)
+            const francSuisse = parseFloat(cleanNumber(row[4] || '0')); // Colonne E
+            const livre = parseFloat(cleanNumber(row[5] || '0'));       // Colonne F
+            const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));  // Colonne G
+            
+            // Vérifier s'il y a au moins un montant non nul
+            const aDesMontants = (ariary !== 0 || euro !== 0 || francSuisse !== 0 || livre !== 0 || banqueEuro !== 0);
+            
+            if (aDesMontants) {
+                detailsEmpruntTiersData.push({
+                    'tiers': nom,
+                    'Ariary': ariary,
+                    'Euro': euro,
+                    'Franc Suisse': francSuisse,
+                    'Livre': livre,
+                    'Banque Euro': banqueEuro
+                });
+            }
+        }
+        
+        console.log('✅ Prêteurs chargés depuis nouvelle feuille:', detailsEmpruntTiersData.length, 'personne(s)');
+        
+    } catch (error) {
+        console.error('❌ Erreur chargement prêteurs:', error);
+    }
+}
        // Charger les détails des dépenses
 async function loadDetailsDepenses() {
     try {
@@ -2152,11 +2214,13 @@ async function loadDetailsDepenses() {
         await loadMainSheet();
         
         // Charger les données supplémentaires en parallèle
-        await Promise.all([
-            loadDetailsDepenses(),
-            loadDonsMembres(),
-            loadDetailsFromMainSheet()
-        ]);
+       // Charger les données supplémentaires en parallèle
+await Promise.all([
+    loadDetailsDepenses(),
+    loadDonsMembres(),
+    loadDetailsFromMainSheet(),
+    loadPreteurs() 
+]);
         
         // Charger la feuille Récap_gl
         const response = await fetch(AUTRES_SOURCES_URL);
@@ -3617,50 +3681,6 @@ async function loadDetailsDepenses() {
     html += '</tbody></table>';
     html += '</div>';
     
-    // ============================================
-    // LISTE DES PRÊTEURS (pour Emprunt)
-    // ============================================
-    if (title === 'Emprunt' && detailsEmpruntTiersData && detailsEmpruntTiersData.length > 0) {
-        html += '<div class="tiers-section" style="margin-top: 20px; border-top: 2px solid #e74c3c; padding-top: 15px;">';
-        html += '<h4 style="color: #e74c3c; margin-bottom: 10px;">👥 LISTE DES PERSONNES QUI NOUS ONT PRÊTÉ DE L\'ARGENT</h4>';
-        html += '<div class="financial-table-container">';
-        html += '<table class="tiers-table financial-table">';
-        html += '<thead><tr>';
-        html += '  <th>Nom du tiers</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th>';
-        html += '</tr></thead><tbody>';
-        
-        let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0;
-        
-        detailsEmpruntTiersData.forEach(item => {
-            html += '   <tr>';
-            html += `  <td class="category" style="text-align:left;">${item.tiers}</td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
-            html += '   </tr>';
-            
-            totalAriary += item.Ariary;
-            totalEuro += item.Euro;
-            totalFrancSuisse += item['Franc Suisse'];
-            totalLivre += item.Livre;
-            totalBanqueEuro += item['Banque Euro'];
-        });
-        
-        html += '<tr class="total-row">';
-        html += '<td class="category"><strong>TOTAL</strong></td>';
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong></td>`;
-        html += '</tr>';
-        
-        html += '</tbody></table>';
-        html += '</div>';
-        html += '</div>';
-    }
     
     // ============================================
     // LISTE DES EMPRUNTEURS (pour Prêt)
