@@ -2413,74 +2413,112 @@ async function loadDetailsDepenses() {
                       // ============================================
                       // ============================================
                       // ============================================
-            // 7. LISTE DES PRÊTEURS - NOUVELLE FEUILLE GOOGLE SHEETS
+                        // ============================================
+            // 7. LISTE DES PRÊTEURS - NOUVELLE STRUCTURE
             // ============================================
             
             // URL de votre nouvelle feuille
             const LISTE_PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&single=true&output=csv';
             
+            // Réinitialiser les données
             detailsEmpruntTiersData = [];
             
             try {
-                console.log('📥 Chargement de la nouvelle feuille des prêteurs...');
+                console.log('📥 Chargement de la nouvelle structure des prêteurs...');
                 const preteursResponse = await fetch(LISTE_PRETEURS_URL);
                 
                 if (preteursResponse.ok) {
                     const preteursCsv = await preteursResponse.text();
                     const preteursLines = parseCSV(preteursCsv);
                     
-                    console.log('📊 Nouvelle feuille - lignes trouvées:', preteursLines.length);
+                    console.log('📊 Nouvelle structure - lignes totales:', preteursLines.length);
+                    
+                    // Structure selon votre description :
+                    // Ligne 4 (index 3) = début des données
+                    // Colonne A (index 0) = Noms des prêteurs
+                    // Colonne B (index 1) = Ariary
+                    // Colonne C (index 2) = Converti en euro (de B)
+                    // Colonne D (index 3) = Euro
+                    // Colonne E (index 4) = CHF
+                    // Colonne F (index 5) = Livre sterling
+                    // Colonne G (index 6) = Banque Euro
+                    // Colonne H (index 7) = Total (calcul automatique)
                     
                     // Parcourir à partir de la ligne 4 (index 3)
                     for (let i = 3; i < preteursLines.length; i++) {
                         const row = preteursLines[i];
+                        
+                        // Vérifier que la ligne existe et a assez de colonnes
                         if (row && row.length >= 8) {
                             const nomPreteur = row[0] ? row[0].trim() : ''; // Colonne A
                             
-                            // Ignorer les lignes vides
-                            if (nomPreteur && nomPreteur !== '') {
-                                // Colonnes selon VOTRE description :
-                                // Colonne A (index 0) = noms des prêteurs
-                                // Colonne B (index 1) = Ariary
-                                // Colonne C (index 2) = converti en euro (non utilisé car c'est une conversion)
-                                // Colonne D (index 3) = Euro
-                                // Colonne E (index 4) = Franc Suisse (CHF)
-                                // Colonne F (index 5) = Livre sterling
-                                // Colonne G (index 6) = Banque Euro
-                                // Colonne H (index 7) = Total (non utilisé)
+                            // Ignorer les lignes vides et les totaux
+                            if (nomPreteur && nomPreteur !== '' && !nomPreteur.toUpperCase().includes('TOTAL')) {
                                 
+                                // Extraction des montants selon votre structure
+                                const ariary = parseFloat(cleanNumber(row[1] || '0'));     // Colonne B
+                                const euroConverti = parseFloat(cleanNumber(row[2] || '0')); // Colonne C (converti)
+                                const euro = parseFloat(cleanNumber(row[3] || '0'));       // Colonne D
+                                const chf = parseFloat(cleanNumber(row[4] || '0'));        // Colonne E
+                                const livre = parseFloat(cleanNumber(row[5] || '0'));      // Colonne F
+                                const banqueEuro = parseFloat(cleanNumber(row[6] || '0')); // Colonne G
+                                const total = parseFloat(cleanNumber(row[7] || '0'));      // Colonne H (total)
+                                
+                                // Calcul du total si non fourni
+                                const totalCalcule = euroConverti + euro + chf + livre + banqueEuro;
+                                const totalFinal = total > 0 ? total : totalCalcule;
+                                
+                                // Structure des montants pour l'affichage
                                 const montant = {
-                                    'Ariary': parseFloat(cleanNumber(row[1] || '0')),      // Colonne B
-                                    'Euro': parseFloat(cleanNumber(row[3] || '0')),        // Colonne D
-                                    'Franc Suisse': parseFloat(cleanNumber(row[4] || '0')), // Colonne E
-                                    'Livre': parseFloat(cleanNumber(row[5] || '0')),       // Colonne F
-                                    'Banque Euro': parseFloat(cleanNumber(row[6] || '0'))  // Colonne G
+                                    'Ariary': ariary,
+                                    'Euro': euro + euroConverti,  // Euro + Euro converti
+                                    'Franc Suisse': chf,
+                                    'Livre': livre,
+                                    'Banque Euro': banqueEuro,
+                                    'Total Euro': totalFinal
                                 };
                                 
-                                // Ajouter seulement s'il y a au moins un montant non nul
+                                // Ajouter seulement s'il y a au moins un montant > 0
                                 if (montant.Ariary !== 0 || montant.Euro !== 0 || 
                                     montant['Franc Suisse'] !== 0 || montant.Livre !== 0 || 
                                     montant['Banque Euro'] !== 0) {
+                                    
                                     detailsEmpruntTiersData.push({
                                         'tiers': nomPreteur,
-                                        ...montant
+                                        'Ariary': montant.Ariary,
+                                        'Euro': montant.Euro,
+                                        'Franc Suisse': montant['Franc Suisse'],
+                                        'Livre': montant.Livre,
+                                        'Banque Euro': montant['Banque Euro'],
+                                        'Total': montant.TotalEuro
                                     });
                                 }
                             }
                         }
                     }
                     
-                    console.log('✅ NOUVELLE SOURCE - Liste des prêteurs chargée:', detailsEmpruntTiersData.length, 'personne(s)');
+                    console.log('✅ NOUVELLE STRUCTURE - Prêteurs chargés:', detailsEmpruntTiersData.length, 'personne(s)');
+                    
+                    // Afficher les 3 premiers pour vérification
+                    if (detailsEmpruntTiersData.length > 0) {
+                        console.log('📋 Exemple des données chargées:');
+                        for (let j = 0; j < Math.min(3, detailsEmpruntTiersData.length); j++) {
+                            const p = detailsEmpruntTiersData[j];
+                            console.log(`   ${j+1}. ${p.tiers}: Ar ${p.Ariary}, € ${p.Euro}, CHF ${p['Franc Suisse']}, £ ${p.Livre}, Banque € ${p['Banque Euro']}`);
+                        }
+                    }
                     
                 } else {
-                    console.error('❌ Erreur chargement nouvelle feuille:', preteursResponse.status);
+                    console.error('❌ Erreur chargement nouvelle structure:', preteursResponse.status);
                     detailsEmpruntTiersData = [];
                 }
                 
             } catch (error) {
-                console.error('❌ Erreur lors du chargement de la nouvelle feuille:', error);
+                console.error('❌ Erreur lors du chargement de la nouvelle structure:', error);
                 detailsEmpruntTiersData = [];
             }
+            
+       
             
             // ============================================
             // 8. LISTE DES EMPRUNTEURS (Prêt) - lignes 33-48 (colonne B-G)
