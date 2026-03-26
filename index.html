@@ -1386,6 +1386,8 @@
         const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
         const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
+        // NOUVELLE SOURCE POUR LA LISTE DES PRÊTEURS
+const LISTE_PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&single=true&output=csv';
         const CORRECT_PASSWORD = 'finadmin';
         
         let sheetData = [];
@@ -2409,40 +2411,74 @@ async function loadDetailsDepenses() {
                 }
             }
                       // ============================================
-            // 7. LISTE DES PRÊTEURS (Emprunt) - lignes 33-48
+                      // ============================================
+            // 7. LISTE DES PRÊTEURS - NOUVELLE FEUILLE GOOGLE SHEETS
             // ============================================
+            
+            // URL de votre nouvelle feuille
+            const LISTE_PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&single=true&output=csv';
             
             detailsEmpruntTiersData = [];
             
-            // Parcourir les lignes à partir de la ligne 33 (index 32) jusqu'à la ligne 48
-            for (let i = 32; i < 48 && i < lines.length; i++) {
-                const row = lines[i];
-                if (row && row.length >= 14) {
-                    const nomTiers = row[8] ? row[8].trim() : ''; // Colonne I (index 8) = nom du tiers
+            try {
+                console.log('📥 Chargement de la nouvelle feuille des prêteurs...');
+                const preteursResponse = await fetch(LISTE_PRETEURS_URL);
+                
+                if (preteursResponse.ok) {
+                    const preteursCsv = await preteursResponse.text();
+                    const preteursLines = parseCSV(preteursCsv);
                     
-                    // Ignorer les lignes vides et la ligne TOTAL
-                    if (nomTiers && nomTiers !== '' && !nomTiers.toUpperCase().includes('TOTAL')) {
-                        const montant = {
-                            'Ariary': parseFloat(cleanNumber(row[9] || '0')),   // Colonne J (index 9)
-                            'Euro': parseFloat(cleanNumber(row[10] || '0')),    // Colonne K (index 10)
-                            'Franc Suisse': parseFloat(cleanNumber(row[11] || '0')), // Colonne L (index 11)
-                            'Livre': parseFloat(cleanNumber(row[12] || '0')),   // Colonne M (index 12)
-                            'Banque Euro': parseFloat(cleanNumber(row[13] || '0'))   // Colonne N (index 13)
-                        };
-                        
-                        // Ajouter seulement s'il y a au moins un montant non nul
-                        if (montant.Ariary !== 0 || montant.Euro !== 0 || montant['Franc Suisse'] !== 0 || 
-                            montant.Livre !== 0 || montant['Banque Euro'] !== 0) {
-                            detailsEmpruntTiersData.push({
-                                'tiers': nomTiers,
-                                ...montant
-                            });
+                    console.log('📊 Nouvelle feuille - lignes trouvées:', preteursLines.length);
+                    
+                    // Parcourir à partir de la ligne 4 (index 3)
+                    for (let i = 3; i < preteursLines.length; i++) {
+                        const row = preteursLines[i];
+                        if (row && row.length >= 7) {
+                            const nomPreteur = row[0] ? row[0].trim() : ''; // Colonne A
+                            
+                            // Ignorer les lignes vides
+                            if (nomPreteur && nomPreteur !== '') {
+                                // Colonnes selon votre description :
+                                // B (index 1) = Ariary
+                                // C (index 2) = converti en euro (pas utilisé)
+                                // D (index 3) = Euro
+                                // E (index 4) = Franc Suisse
+                                // F (index 5) = Livre sterling
+                                // G (index 6) = Banque Euro
+                                
+                                const montant = {
+                                    'Ariary': parseFloat(cleanNumber(row[1] || '0')),      // Colonne B
+                                    'Euro': parseFloat(cleanNumber(row[3] || '0')),        // Colonne D
+                                    'Franc Suisse': parseFloat(cleanNumber(row[4] || '0')), // Colonne E
+                                    'Livre': parseFloat(cleanNumber(row[5] || '0')),       // Colonne F
+                                    'Banque Euro': parseFloat(cleanNumber(row[6] || '0'))  // Colonne G
+                                };
+                                
+                                // Ajouter seulement s'il y a au moins un montant non nul
+                                if (montant.Ariary !== 0 || montant.Euro !== 0 || 
+                                    montant['Franc Suisse'] !== 0 || montant.Livre !== 0 || 
+                                    montant['Banque Euro'] !== 0) {
+                                    detailsEmpruntTiersData.push({
+                                        'tiers': nomPreteur,
+                                        ...montant
+                                    });
+                                }
+                            }
                         }
                     }
+                    
+                    console.log('✅ NOUVELLE SOURCE - Liste des prêteurs chargée:', detailsEmpruntTiersData.length, 'personne(s)');
+                    
+                } else {
+                    console.error('❌ Erreur chargement nouvelle feuille:', preteursResponse.status);
+                    // En cas d'erreur, on garde les données vides
+                    detailsEmpruntTiersData = [];
                 }
+                
+            } catch (error) {
+                console.error('❌ Erreur lors du chargement de la nouvelle feuille:', error);
+                detailsEmpruntTiersData = [];
             }
-            
-            console.log('✅ Liste des prêteurs (Emprunt):', detailsEmpruntTiersData.length, 'personne(s)');
             
             // ============================================
             // 8. LISTE DES EMPRUNTEURS (Prêt) - lignes 33-48 (colonne B-G)
