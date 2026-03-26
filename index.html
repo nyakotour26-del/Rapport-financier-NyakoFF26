@@ -2412,6 +2412,7 @@ async function loadDetailsDepenses() {
             }
                       // ============================================
                       // ============================================
+                      // ============================================
             // 7. LISTE DES PRÊTEURS - NOUVELLE FEUILLE GOOGLE SHEETS
             // ============================================
             
@@ -2433,18 +2434,20 @@ async function loadDetailsDepenses() {
                     // Parcourir à partir de la ligne 4 (index 3)
                     for (let i = 3; i < preteursLines.length; i++) {
                         const row = preteursLines[i];
-                        if (row && row.length >= 7) {
+                        if (row && row.length >= 8) {
                             const nomPreteur = row[0] ? row[0].trim() : ''; // Colonne A
                             
                             // Ignorer les lignes vides
                             if (nomPreteur && nomPreteur !== '') {
-                                // Colonnes selon votre description :
-                                // B (index 1) = Ariary
-                                // C (index 2) = converti en euro (pas utilisé)
-                                // D (index 3) = Euro
-                                // E (index 4) = Franc Suisse
-                                // F (index 5) = Livre sterling
-                                // G (index 6) = Banque Euro
+                                // Colonnes selon VOTRE description :
+                                // Colonne A (index 0) = noms des prêteurs
+                                // Colonne B (index 1) = Ariary
+                                // Colonne C (index 2) = converti en euro (non utilisé car c'est une conversion)
+                                // Colonne D (index 3) = Euro
+                                // Colonne E (index 4) = Franc Suisse (CHF)
+                                // Colonne F (index 5) = Livre sterling
+                                // Colonne G (index 6) = Banque Euro
+                                // Colonne H (index 7) = Total (non utilisé)
                                 
                                 const montant = {
                                     'Ariary': parseFloat(cleanNumber(row[1] || '0')),      // Colonne B
@@ -2471,7 +2474,6 @@ async function loadDetailsDepenses() {
                     
                 } else {
                     console.error('❌ Erreur chargement nouvelle feuille:', preteursResponse.status);
-                    // En cas d'erreur, on garde les données vides
                     detailsEmpruntTiersData = [];
                 }
                 
