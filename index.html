@@ -1383,7 +1383,6 @@
         // URLs
         const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
         const MAIN_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1493759609&single=true&output=csv';
-const DETAILS_VENTES_SPECIAL_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
         const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
         const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
@@ -1449,17 +1448,6 @@ const DETAILS_VENTES_SPECIAL_URL = 'https://docs.google.com/spreadsheets/d/e/2PA
         // Données pour les collectes (détails avec localité)
         let detailsCollectesData = [];
         
-let detailsVentesSpecial = {
-    vente: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    artisanat: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalEntree: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalSortie: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    soldeUnite: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    soldeEuro: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalSoldeEuro: 0
-};
-
-
         // Données pour les dons par localité
         let donsParLocaliteData = [];
         
@@ -2218,89 +2206,7 @@ async function loadDetailsDepenses() {
                 console.error('❌ Erreur chargement GOOGLE_SHEETS_URL:', error);
             }
         }
-async function loadDetailsVentesSpecial() {
-    try {
-        const response = await fetch(DETAILS_VENTES_SPECIAL_URL);
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const csvText = await response.text();
-        const lines = parseCSV(csvText);
-        
-        // Fonction pour récupérer une valeur
-        const getVal = (row, colIdx) => parseFloat(cleanNumber(row && row[colIdx] ? row[colIdx] : '0'));
-        
-        if (lines.length >= 12) {
-            // Lignes selon votre description
-            const rowVente = lines[2];        // Ligne 3 (Vente)
-            const rowArtisanat = lines[3];    // Ligne 4 (Artisanat)
-            const rowTotalEntree = lines[5];  // Ligne 6 (Total Entrée)
-            const rowTotalSortie = lines[6];  // Ligne 7 (Total Sortie)
-            const rowSoldeUnite = lines[7];   // Ligne 8 (Solde unité monétaire)
-            const rowSoldeEuro = lines[8];    // Ligne 9 (Converties en euro)
-            const rowTotalEuro = lines[11];   // Ligne 12 (Total soldes euro)
-            
-            // Vente
-            detailsVentesSpecial.vente = {
-                madaEuro: getVal(rowVente, 2),
-                euro: getVal(rowVente, 3),
-                francSuisse: getVal(rowVente, 4),
-                livre: getVal(rowVente, 5),
-                banqueEuro: getVal(rowVente, 6)
-            };
-            
-            // Artisanat
-            detailsVentesSpecial.artisanat = {
-                madaEuro: getVal(rowArtisanat, 2),
-                euro: getVal(rowArtisanat, 3),
-                francSuisse: getVal(rowArtisanat, 4),
-                livre: getVal(rowArtisanat, 5),
-                banqueEuro: getVal(rowArtisanat, 6)
-            };
-            
-            // Total Entrée
-            detailsVentesSpecial.totalEntree = {
-                madaEuro: getVal(rowTotalEntree, 2),
-                euro: getVal(rowTotalEntree, 3),
-                francSuisse: getVal(rowTotalEntree, 4),
-                livre: getVal(rowTotalEntree, 5),
-                banqueEuro: getVal(rowTotalEntree, 6)
-            };
-            
-            // Total Sortie
-            detailsVentesSpecial.totalSortie = {
-                madaEuro: getVal(rowTotalSortie, 2),
-                euro: getVal(rowTotalSortie, 3),
-                francSuisse: getVal(rowTotalSortie, 4),
-                livre: getVal(rowTotalSortie, 5),
-                banqueEuro: getVal(rowTotalSortie, 6)
-            };
-            
-            // Solde unité monétaire
-            detailsVentesSpecial.soldeUnite = {
-                madaEuro: getVal(rowSoldeUnite, 2),
-                euro: getVal(rowSoldeUnite, 3),
-                francSuisse: getVal(rowSoldeUnite, 4),
-                livre: getVal(rowSoldeUnite, 5),
-                banqueEuro: getVal(rowSoldeUnite, 6)
-            };
-            
-            // Solde converti en euro
-            detailsVentesSpecial.soldeEuro = {
-                madaEuro: getVal(rowSoldeEuro, 2),
-                euro: getVal(rowSoldeEuro, 3),
-                francSuisse: getVal(rowSoldeEuro, 4),
-                livre: getVal(rowSoldeEuro, 5),
-                banqueEuro: getVal(rowSoldeEuro, 6)
-            };
-            
-            // Total des soldes en euro
-            detailsVentesSpecial.totalSoldeEuro = getVal(rowTotalEuro, 2);
-            
-            console.log('✅ Tableau spécial ventes chargé');
-        }
-    } catch (error) {
-        console.error('❌ Erreur chargement tableau spécial:', error);
-    }
-}
+
         // Charger toutes les données supplémentaires
        async function loadAutresSources() {
     try {
@@ -2310,13 +2216,13 @@ async function loadDetailsVentesSpecial() {
         await loadMainSheet();
         
         // Charger les données supplémentaires en parallèle
-await Promise.all([
-    loadDetailsDepenses(),
-    loadDonsMembres(),
-    loadDetailsFromMainSheet(),
-    loadPreteursFromNewSource(),
-    loadDetailsVentesSpecial()   
-]);
+        await Promise.all([
+            loadDetailsDepenses(),
+            loadDonsMembres(),
+            loadDetailsFromMainSheet(),
+            loadPreteursFromNewSource()  // NOUVELLE SOURCE POUR LES PRÊTEURS
+        ]);
+        
         // Charger la feuille Récap_gl
         const response = await fetch(AUTRES_SOURCES_URL);
         if (response.ok) {
@@ -3192,113 +3098,140 @@ await Promise.all([
             return symbols[currency] || '';
         }
 
-      function showDetailsVentes(event) {
-    const bulle = document.getElementById('detailsBulle');
-    const overlay = document.getElementById('detailsOverlay');
-    const content = document.getElementById('detailsBulleContent');
-    const titleElement = document.getElementById('bulleTitle');
-    
-    titleElement.textContent = '📋 DÉTAILS VENTES';
-    
-    let html = '';
-    
-    // Tableau des ventes par localité (existant)
-    if (detailsVentesData.length === 0) {
-        html += '<p style="text-align:center;color:#e74c3c;">Aucune donnée de vente par localité disponible</p>';
-    } else {
-        html += '<h4 style="color:#e74c3c;">📍 VENTES PAR LOCALITÉ</h4>';
-        html += '<table class="tiers-table">';
-        html += '<thead><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead><tbody>';
-        
-        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
-        
-        detailsVentesData.forEach(item => {
-            html += '<tr>';
-            html += `<td>${item.localite}</td>`;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
-            html += '</tr>';
+        function showDetailsDon(event) {
+            if (event && event.detail !== 2) {
+                return;
+            }
             
-            totalAriary += item.Ariary;
-            totalEuro += item.Euro;
-            totalSuisse += item['Franc Suisse'];
-            totalLivre += item.Livre;
-            totalBanque += item['Banque Euro'];
-        });
-        
-        html += '<tr class="total-row">';
-        html += '<td><strong>TOTAL</strong></td>';
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong></td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanque, 'Banque Euro')}</strong></td>`;
-        html += '</tr>';
-        html += '</tbody></table>';
-    }
-    
-    // ========== NOUVEAU TABLEAU SPÉCIAL (Vente / Artisanat) ==========
-    html += '<h4 style="color:#2980b9; margin-top:20px; border-top:2px solid #2980b9; padding-top:15px;">📊 TABLEAU RÉCAPITULATIF VENTES & ARTISANAT</h4>';
-    html += '<div class="financial-table-container">';
-    html += '<table class="financial-table" style="font-size:12px;">';
-    html += '<thead>';
-    html += '<tr>';
-    html += '<th class="category">Catégorie</th>';
-    html += '<th>À Mada (en euro)</th>';
-    html += '<th>Euro</th>';
-    html += '<th>Franc suisse</th>';
-    html += '<th>Livre sterling</th>';
-    html += '<th>Banque en euro</th>';
-    html += '</tr>';
-    html += '</thead>';
-    html += '<tbody>';
-    
-    // Fonction pour ajouter une ligne
-    const addRow = (label, data, rowClass = '') => {
-        html += `<tr class="${rowClass}">`;
-        html += `<td class="category">${label}</td>`;
-        html += `<td>${formatNumberWithUnit(data.madaEuro || 0, 'Euro')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.euro || 0, 'Euro')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.francSuisse || 0, 'Franc Suisse')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.livre || 0, 'Livre')}</td>`;
-        html += `<td>${formatNumberWithUnit(data.banqueEuro || 0, 'Banque Euro')}</td>`;
-        html += '</tr>';
-    };
-    
-    // Ajouter les lignes
-    addRow('Vente', detailsVentesSpecial.vente);
-    addRow('Artisanat', detailsVentesSpecial.artisanat);
-    addRow('Total Entrée', detailsVentesSpecial.totalEntree, 'entree-row');
-    addRow('Total Sortie', detailsVentesSpecial.totalSortie, 'depense-row');
-    addRow('Solde (unité monétaire)', detailsVentesSpecial.soldeUnite, 'difference-row');
-    addRow('Solde converti en euro', detailsVentesSpecial.soldeEuro, 'total-row');
-    
-    // Ligne Total des soldes en euro
-    html += '<tr class="total-row" style="background-color:#d4edda; font-weight:bold;">';
-    html += '<td class="category"><strong>TOTAL SOLDES EN EURO</strong></td>';
-    html += `<td colspan="5"><strong>${formatNumberWithUnit(detailsVentesSpecial.totalSoldeEuro, 'Euro')}</strong></td>`;
-    html += '</tr>';
-    
-    html += '</tbody>';
-    html += '</table>';
-    html += '</div>';
-    
-    content.innerHTML = html;
-    
-    bulle.style.display = 'block';
-    overlay.style.display = 'block';
-    
-    const bulleWidth = bulle.offsetWidth;
-    const windowWidth = window.innerWidth;
-    let left = (windowWidth - bulleWidth) / 2;
-    if (left < 20) left = 20;
-    
-    bulle.style.left = left + 'px';
-    bulle.style.top = '20px';
-}
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DONS';
+            
+            let html = '<h4 style="color: #e74c3c; margin-bottom: 10px;">RÉCAPITULATIF DONS REÇUS</h4>';
+            
+            if (detailsDonData.length === 0) {
+                html += '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                html += '<table class="financial-table">';
+                html += '<thead><th>Type de don</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDonData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item['Type']}   </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}   </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Euro'], 'Euro')}   </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}   </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Livre'], 'Livre')}   </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}   </td>`;
+                    html += '</tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL DONS REÇUS</td>';
+                html += `<td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `<td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '</tr>';
+                
+                html += '</table>';
+            }
+            
+            if (donsParLocaliteData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>📍 DONS PAR LOCALITÉ</h4>';
+                html += '<table class="tiers-table">';
+                html += '<thead><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead>';
+                
+                let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                
+                donsParLocaliteData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.localite}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanque += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            if (donsMembresData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>👥 DÉTAILS DONS PAR MEMBRE</h4>';
+                html += '<table class="tiers-table">';
+                html += '<thead><th>Membre</th><th>Promesse</th><th>Payé</th><th>Reste</th></thead>';
+                
+                let totalPromesse = 0, totalPaye = 0, totalReste = 0;
+                
+                donsMembresData.forEach(item => {
+                    html += '<tr>';
+                    html += `<td>${item.membre}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.promesse, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.paye, 'Euro')}</td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.reste, 'Euro')}</td>`;
+                    html += '</tr>';
+                    
+                    totalPromesse += item.promesse;
+                    totalPaye += item.paye;
+                    totalReste += item.reste;
+                });
+                
+                html += '<tr class="total-row">';
+                html += '<td>TOTAL</td>';
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalPromesse, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalPaye, 'Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalReste, 'Euro')}</td>`;
+                html += '</tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
 
         function showDetailsVentes(event) {
             const bulle = document.getElementById('detailsBulle');
@@ -4466,166 +4399,6 @@ html += '</tr>';
                 showTemporaryMessage('❌ Erreur lors de la génération du PDF', 'error');
             }
         }
-// NOUVELLE FONCTION : Charger les données de vente/artisanat
-async function loadVentesArtisanatData() {
-    try {
-        console.log('Chargement des données ventes/artisanat...');
-        const ventesArtisanatUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
-        
-        const response = await fetch(ventesArtisanatUrl);
-        if (!response.ok) {
-            throw new Error(`Erreur chargement ventes/artisanat: ${response.status}`);
-        }
-        
-        const csvText = await response.text();
-        const lines = parseCSV(csvText);
-        
-        console.log('Données ventes/artisanat chargées:', lines.length, 'lignes');
-        
-        // Structure pour stocker les données
-        window.ventesArtisanatData = {
-            // Ligne 3: Vente (index 2 = ligne 3)
-            ventes: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 4: Artisanat (index 3 = ligne 4)
-            artisanat: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 6: Total des entrées
-            totalEntrees: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 7: Total des sorties
-            totalSorties: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 8: Solde suivant unité monétaire
-            soldeUnite: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 9: Valeurs converties en euro
-            valeursConverties: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 10: Tous les soldes en euro
-            soldesEuro: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            totalSoldesEuro: 0  // C12
-        };
-        
-        // Extraire les données
-        for (let i = 0; i < lines.length; i++) {
-            const row = lines[i];
-            if (!row) continue;
-            
-            // Ligne 3: Vente (index 2)
-            if (i === 2 && row[1] && row[1].toLowerCase().includes('vente')) {
-                window.ventesArtisanatData.ventes['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.ventes['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.ventes['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.ventes['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.ventes['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-                console.log('✅ Ventes chargées:', window.ventesArtisanatData.ventes);
-            }
-            
-            // Ligne 4: Artisanat (index 3)
-            if (i === 3 && row[1] && row[1].toLowerCase().includes('artisanat')) {
-                window.ventesArtisanatData.artisanat['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.artisanat['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.artisanat['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.artisanat['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.artisanat['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-                console.log('✅ Artisanat chargé:', window.ventesArtisanatData.artisanat);
-            }
-            
-            // Ligne 6: Total des entrées (index 5)
-            if (i === 5 && row[1] && row[1].toLowerCase().includes('total')) {
-                window.ventesArtisanatData.totalEntrees['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.totalEntrees['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.totalEntrees['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.totalEntrees['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.totalEntrees['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 7: Total des sorties (index 6)
-            if (i === 6 && row[1] && row[1].toLowerCase().includes('sortie')) {
-                window.ventesArtisanatData.totalSorties['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.totalSorties['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.totalSorties['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.totalSorties['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.totalSorties['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 8: Solde suivant unité monétaire (index 7)
-            if (i === 7 && row[1] && row[1].toLowerCase().includes('solde')) {
-                window.ventesArtisanatData.soldeUnite['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.soldeUnite['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.soldeUnite['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.soldeUnite['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.soldeUnite['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 9: Valeurs converties en euro (index 8)
-            if (i === 8 && row[1] && row[1].toLowerCase().includes('converti')) {
-                window.ventesArtisanatData.valeursConverties['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.valeursConverties['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.valeursConverties['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.valeursConverties['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.valeursConverties['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 10: Tous les soldes en euro (index 9)
-            if (i === 9 && row[1] && row[1].toLowerCase().includes('solde')) {
-                window.ventesArtisanatData.soldesEuro['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.soldesEuro['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.soldesEuro['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.soldesEuro['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.soldesEuro['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 12: Total des soldes en euro (index 11)
-            if (i === 11 && row[1] && row[1].toLowerCase().includes('total')) {
-                window.ventesArtisanatData.totalSoldesEuro = parseFloat(cleanNumber(row[2] || '0'));
-            }
-        }
-        
-        console.log('✅ Données ventes/artisanat chargées avec succès');
-        
-    } catch (error) {
-        console.error('❌ Erreur chargement ventes/artisanat:', error);
-        window.ventesArtisanatData = null;
-    }
-}
     </script>
 </body>
 </html>
