@@ -2539,20 +2539,36 @@ async function loadDetailsDepenses() {
                 }
             }
             
-            // CHANGE - Tableau principal (ligne 8, colonnes Q-U)
             if (lines.length > 7) {
-                const ligne8 = lines[7];
-                if (ligne8 && ligne8.length >= 21) {
-                    autresSourcesData['Change'] = {
-                        'Ariary': parseFloat(cleanNumber(ligne8[16] || '0')),
-                        'Euro': parseFloat(cleanNumber(ligne8[17] || '0')),
-                        'Franc Suisse': parseFloat(cleanNumber(ligne8[18] || '0')),
-                        'Livre': parseFloat(cleanNumber(ligne8[19] || '0')),
-                        'Banque Euro': parseFloat(cleanNumber(ligne8[20] || '0'))
-                    };
-                    console.log('✅ Tableau principal - Change (Q8:U8):', autresSourcesData['Change']);
-                }
-            }
+                        const ligne8 = lines[7];
+                        if (ligne8 && ligne8.length >= 21) {
+                            detailsChangeData.montant = {
+                                'Ariary': parseFloat(cleanNumber(ligne8[16] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne8[17] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne8[18] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne8[19] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne8[20] || '0'))
+                            };
+                            
+                            detailsChangeData.remboursement = {
+                                'Ariary': parseFloat(cleanNumber(ligne8[9] || '0')),
+                                'Euro': parseFloat(cleanNumber(ligne8[10] || '0')),
+                                'Franc Suisse': parseFloat(cleanNumber(ligne8[11] || '0')),
+                                'Livre': parseFloat(cleanNumber(ligne8[12] || '0')),
+                                'Banque Euro': parseFloat(cleanNumber(ligne8[13] || '0'))
+                            };
+                            
+                            autresSourcesData['Change'] = {
+                                'Ariary': detailsChangeData.montant.Ariary - detailsChangeData.remboursement.Ariary,
+                                'Euro': detailsChangeData.montant.Euro - detailsChangeData.remboursement.Euro,
+                                'Franc Suisse': detailsChangeData.montant['Franc Suisse'] - detailsChangeData.remboursement['Franc Suisse'],
+                                'Livre': detailsChangeData.montant.Livre - detailsChangeData.remboursement.Livre,
+                                'Banque Euro': detailsChangeData.montant['Banque Euro'] - detailsChangeData.remboursement['Banque Euro']
+                            };
+                            console.log('✅ Change (ligne 8) chargé depuis Q8:U8');
+                        }
+                    }
+
             
             // ============================================
             // 6. BULLES DE DÉTAILS (lignes 18-20)
@@ -2608,7 +2624,7 @@ async function loadDetailsDepenses() {
                 }
             }
             
-            // TRANSFERT - Bulle (ligne 20)
+           // TRANSFERT - Bulle (ligne 20)
             if (lines.length > 19) {
                 const ligne20 = lines[19]; // Ligne 20 (index 19)
                 if (ligne20 && ligne20.length >= 14) {
@@ -2632,6 +2648,7 @@ async function loadDetailsDepenses() {
                     console.log('✅ Bulle Transfert - Remboursement (J20:N20):', detailsTransfertData.remboursement);
                 }
             }
+
                       // ============================================
             // 7. LISTE DES PRÊTEURS (Emprunt) - lignes 33-48 (NE SERT PLUS - REMPLACÉ PAR NOUVELLE SOURCE)
             // ============================================
