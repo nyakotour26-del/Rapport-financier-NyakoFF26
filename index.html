@@ -1383,10 +1383,10 @@
         // URLs
         const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=106676164&single=true&output=csv';
         const MAIN_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1493759609&single=true&output=csv';
-const DETAILS_VENTES_SPECIAL_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
         const AUTRES_SOURCES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1910246230&single=true&output=csv';
         const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
         const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
+        const VENTES_DETAILS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
         const CORRECT_PASSWORD = 'finadmin';
         
         let sheetData = [];
@@ -1446,20 +1446,12 @@ const DETAILS_VENTES_SPECIAL_URL = 'https://docs.google.com/spreadsheets/d/e/2PA
         // Données pour les ventes (détails avec localité)
         let detailsVentesData = [];
         
+        // Données détaillées pour la bulle VENTES (tableau complet avec localité et colonnes)
+        let ventesDetailsComplet = [];
+        
         // Données pour les collectes (détails avec localité)
         let detailsCollectesData = [];
         
-let detailsVentesSpecial = {
-    vente: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    artisanat: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalEntree: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalSortie: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    soldeUnite: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    soldeEuro: { madaEuro: 0, euro: 0, francSuisse: 0, livre: 0, banqueEuro: 0 },
-    totalSoldeEuro: 0
-};
-
-
         // Données pour les dons par localité
         let donsParLocaliteData = [];
         
@@ -1485,6 +1477,158 @@ let detailsVentesSpecial = {
             transfert: { ariary: 33, euro: 34, francSuisse: 35, livre: 36, banqueEuro: 37 },
             change: { ariary: 38, euro: 39, francSuisse: 40, livre: 41, banqueEuro: 42 }
         };
+        
+        // Fonction pour charger les données détaillées des ventes (feuille avec gid=1469962647)
+        async function loadVentesDetails() {
+            try {
+                console.log('Chargement des détails ventes depuis VENTES_DETAILS_URL...');
+                const response = await fetch(VENTES_DETAILS_URL);
+                if (!response.ok) {
+                    throw new Error(`Erreur chargement détails ventes: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                const lines = parseCSV(csvText);
+                
+                ventesDetailsComplet = [];
+                
+                // Structure du tableau:
+                // Ligne 2: en-têtes colonnes: C2="À mada (en euro)", D2="Euro", E2="Franc suisse", F2="Livre sterling", G2="Banque en euro"
+                // Lignes de données: B3="Vente", B4="Artisanat"
+                // Lignes 6-10: Totaux et soldes
+                
+                console.log('📊 Traitement des données ventes détaillées...');
+                
+                // Parcourir les lignes pour trouver les données de ventes et artisanat
+                for (let i = 0; i < lines.length && i < 10; i++) {
+                    const row = lines[i];
+                    if (!row) continue;
+                    
+                    const libelle = row[1] ? row[1].trim() : '';
+                    
+                    if (libelle === 'Vente' || libelle === 'Artisanat') {
+                        // Colonnes C (index 2), D (3), E (4), F (5), G (6)
+                        const ariaryEuro = parseFloat(cleanNumber(row[2] || '0'));
+                        const euro = parseFloat(cleanNumber(row[3] || '0'));
+                        const francSuisse = parseFloat(cleanNumber(row[4] || '0'));
+                        const livre = parseFloat(cleanNumber(row[5] || '0'));
+                        const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
+                        
+                        ventesDetailsComplet.push({
+                            'categorie': libelle,
+                            'Ariary': ariaryEuro,
+                            'Euro': euro,
+                            'Franc Suisse': francSuisse,
+                            'Livre': livre,
+                            'Banque Euro': banqueEuro
+                        });
+                        
+                        console.log(`   ✅ ${libelle}: Ariary(€)=${ariaryEuro}, Euro=${euro}, CHF=${francSuisse}, GBP=${livre}, Banque=${banqueEuro}`);
+                    }
+                }
+                
+                // Récupérer les totaux (lignes 6, 7, 8, 9, 10)
+                const totalEntree = { categorie: 'Total Entrées', 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 };
+                const totalSortie = { categorie: 'Total Sorties', 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 };
+                const soldeUniteMonetaire = { categorie: 'Solde (par unité monétaire)', 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 };
+                const valeursConvertiesEuro = { categorie: 'Valeurs converties en euro', 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 };
+                const tousSoldesEuro = { categorie: 'Tous les soldes en euro', 'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0 };
+                
+                // Ligne 6 (index 5) - Total entrées
+                if (lines.length > 5) {
+                    const row6 = lines[5];
+                    if (row6) {
+                        totalEntree.Ariary = parseFloat(cleanNumber(row6[2] || '0'));
+                        totalEntree.Euro = parseFloat(cleanNumber(row6[3] || '0'));
+                        totalEntree['Franc Suisse'] = parseFloat(cleanNumber(row6[4] || '0'));
+                        totalEntree.Livre = parseFloat(cleanNumber(row6[5] || '0'));
+                        totalEntree['Banque Euro'] = parseFloat(cleanNumber(row6[6] || '0'));
+                    }
+                }
+                
+                // Ligne 7 (index 6) - Total sorties
+                if (lines.length > 6) {
+                    const row7 = lines[6];
+                    if (row7) {
+                        totalSortie.Ariary = parseFloat(cleanNumber(row7[2] || '0'));
+                        totalSortie.Euro = parseFloat(cleanNumber(row7[3] || '0'));
+                        totalSortie['Franc Suisse'] = parseFloat(cleanNumber(row7[4] || '0'));
+                        totalSortie.Livre = parseFloat(cleanNumber(row7[5] || '0'));
+                        totalSortie['Banque Euro'] = parseFloat(cleanNumber(row7[6] || '0'));
+                    }
+                }
+                
+                // Ligne 8 (index 7) - Solde suivant unité monétaire
+                if (lines.length > 7) {
+                    const row8 = lines[7];
+                    if (row8) {
+                        soldeUniteMonetaire.Ariary = parseFloat(cleanNumber(row8[2] || '0'));
+                        soldeUniteMonetaire.Euro = parseFloat(cleanNumber(row8[3] || '0'));
+                        soldeUniteMonetaire['Franc Suisse'] = parseFloat(cleanNumber(row8[4] || '0'));
+                        soldeUniteMonetaire.Livre = parseFloat(cleanNumber(row8[5] || '0'));
+                        soldeUniteMonetaire['Banque Euro'] = parseFloat(cleanNumber(row8[6] || '0'));
+                    }
+                }
+                
+                // Ligne 9 (index 8) - Valeurs converties en euro
+                if (lines.length > 8) {
+                    const row9 = lines[8];
+                    if (row9) {
+                        valeursConvertiesEuro.Ariary = parseFloat(cleanNumber(row9[2] || '0'));
+                        valeursConvertiesEuro.Euro = parseFloat(cleanNumber(row9[3] || '0'));
+                        valeursConvertiesEuro['Franc Suisse'] = parseFloat(cleanNumber(row9[4] || '0'));
+                        valeursConvertiesEuro.Livre = parseFloat(cleanNumber(row9[5] || '0'));
+                        valeursConvertiesEuro['Banque Euro'] = parseFloat(cleanNumber(row9[6] || '0'));
+                    }
+                }
+                
+                // Ligne 10 (index 9) - Tous les soldes en euro
+                if (lines.length > 9) {
+                    const row10 = lines[9];
+                    if (row10) {
+                        tousSoldesEuro.Ariary = parseFloat(cleanNumber(row10[2] || '0'));
+                        tousSoldesEuro.Euro = parseFloat(cleanNumber(row10[3] || '0'));
+                        tousSoldesEuro['Franc Suisse'] = parseFloat(cleanNumber(row10[4] || '0'));
+                        tousSoldesEuro.Livre = parseFloat(cleanNumber(row10[5] || '0'));
+                        tousSoldesEuro['Banque Euro'] = parseFloat(cleanNumber(row10[6] || '0'));
+                    }
+                }
+                
+                // Valeur totale des soldes en euro (C12)
+                let totalSoldesEuro = 0;
+                if (lines.length > 11) {
+                    const row12 = lines[11];
+                    if (row12 && row12.length > 2) {
+                        totalSoldesEuro = parseFloat(cleanNumber(row12[2] || '0'));
+                    }
+                }
+                
+                // Ajouter les lignes récapitulatives
+                ventesDetailsComplet.push(totalEntree);
+                ventesDetailsComplet.push(totalSortie);
+                ventesDetailsComplet.push(soldeUniteMonetaire);
+                ventesDetailsComplet.push(valeursConvertiesEuro);
+                ventesDetailsComplet.push(tousSoldesEuro);
+                
+                // Ajouter le total des soldes en euro
+                ventesDetailsComplet.push({
+                    categorie: 'TOTAL DES SOLDES EN EURO',
+                    'Ariary': 0,
+                    'Euro': totalSoldesEuro,
+                    'Franc Suisse': 0,
+                    'Livre': 0,
+                    'Banque Euro': 0
+                });
+                
+                console.log('✅ Détails ventes chargés:', ventesDetailsComplet.length, 'lignes');
+                console.log('   - Vente:', ventesDetailsComplet[0]);
+                console.log('   - Artisanat:', ventesDetailsComplet[1]);
+                console.log('   - Total soldes en euro:', totalSoldesEuro);
+                
+            } catch (error) {
+                console.error('❌ Erreur chargement détails ventes:', error);
+            }
+        }
         
         // Fonction pour charger les prêteurs depuis la nouvelle source
         async function loadPreteursFromNewSource() {
@@ -1932,7 +2076,7 @@ let detailsVentesSpecial = {
                 const totalEuro = valeurC + valeurD + valeurG + (valeurE * tauxCHF) + (valeurF * tauxGBP);
                 
                 html += '<tr class="depense-row">';
-                html += `<td class="category">${libelle}  </td>`;
+                html += `<td class="category">${libelle}</td>`;
                 html += `<td>${formatNumberWithUnit(valeurC, 'Euro')}</td>`;
                 html += `<td>${formatNumberWithUnit(valeurD, 'Euro')}</td>`;
                 html += `<td>${formatNumberWithUnit(valeurE, 'Franc Suisse')}</td>`;
@@ -2218,111 +2362,8 @@ async function loadDetailsDepenses() {
                 console.error('❌ Erreur chargement GOOGLE_SHEETS_URL:', error);
             }
         }
-async function loadDetailsVentesSpecial() {
-    try {
-        console.log('🔄 Chargement du tableau spécial ventes...');
-        const response = await fetch(DETAILS_VENTES_SPECIAL_URL);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const csvText = await response.text();
-        const lines = parseCSV(csvText);
-        
-        console.log('📊 Lignes chargées:', lines.length);
-        
-        // Afficher les 15 premières lignes pour déboguer
-        for(let i = 0; i < Math.min(15, lines.length); i++) {
-            if(lines[i] && lines[i][0]) {
-                console.log(`Ligne ${i}:`, lines[i][0], lines[i][1], lines[i][2]);
-            }
-        }
-        
-        // Fonction pour récupérer une valeur
-        const getVal = (row, colIdx) => {
-            if(!row || !row[colIdx]) return 0;
-            return parseFloat(cleanNumber(row[colIdx]));
-        };
-        
-        if (lines.length >= 12) {
-            // Lignes selon votre description
-            const rowVente = lines[2];        // Ligne 3 (Vente)
-            const rowArtisanat = lines[3];    // Ligne 4 (Artisanat)
-            const rowTotalEntree = lines[5];  // Ligne 6 (Total Entrée)
-            const rowTotalSortie = lines[6];  // Ligne 7 (Total Sortie)
-            const rowSoldeUnite = lines[7];   // Ligne 8 (Solde unité monétaire)
-            const rowSoldeEuro = lines[8];    // Ligne 9 (Converties en euro)
-            const rowTotalEuro = lines[11];   // Ligne 12 (Total soldes euro)
-            
-            // Vente
-            detailsVentesSpecial.vente = {
-                madaEuro: getVal(rowVente, 2),
-                euro: getVal(rowVente, 3),
-                francSuisse: getVal(rowVente, 4),
-                livre: getVal(rowVente, 5),
-                banqueEuro: getVal(rowVente, 6)
-            };
-            
-            // Artisanat
-            detailsVentesSpecial.artisanat = {
-                madaEuro: getVal(rowArtisanat, 2),
-                euro: getVal(rowArtisanat, 3),
-                francSuisse: getVal(rowArtisanat, 4),
-                livre: getVal(rowArtisanat, 5),
-                banqueEuro: getVal(rowArtisanat, 6)
-            };
-            
-            // Total Entrée
-            detailsVentesSpecial.totalEntree = {
-                madaEuro: getVal(rowTotalEntree, 2),
-                euro: getVal(rowTotalEntree, 3),
-                francSuisse: getVal(rowTotalEntree, 4),
-                livre: getVal(rowTotalEntree, 5),
-                banqueEuro: getVal(rowTotalEntree, 6)
-            };
-            
-            // Total Sortie
-            detailsVentesSpecial.totalSortie = {
-                madaEuro: getVal(rowTotalSortie, 2),
-                euro: getVal(rowTotalSortie, 3),
-                francSuisse: getVal(rowTotalSortie, 4),
-                livre: getVal(rowTotalSortie, 5),
-                banqueEuro: getVal(rowTotalSortie, 6)
-            };
-            
-            // Solde unité monétaire
-            detailsVentesSpecial.soldeUnite = {
-                madaEuro: getVal(rowSoldeUnite, 2),
-                euro: getVal(rowSoldeUnite, 3),
-                francSuisse: getVal(rowSoldeUnite, 4),
-                livre: getVal(rowSoldeUnite, 5),
-                banqueEuro: getVal(rowSoldeUnite, 6)
-            };
-            
-            // Solde converti en euro
-            detailsVentesSpecial.soldeEuro = {
-                madaEuro: getVal(rowSoldeEuro, 2),
-                euro: getVal(rowSoldeEuro, 3),
-                francSuisse: getVal(rowSoldeEuro, 4),
-                livre: getVal(rowSoldeEuro, 5),
-                banqueEuro: getVal(rowSoldeEuro, 6)
-            };
-            
-            // Total des soldes en euro
-            detailsVentesSpecial.totalSoldeEuro = getVal(rowTotalEuro, 2);
-            
-            console.log('✅ Tableau spécial ventes chargé avec succès');
-            console.log('📊 Vente:', detailsVentesSpecial.vente);
-            console.log('📊 Artisanat:', detailsVentesSpecial.artisanat);
-            console.log('📊 Total soldes euro:', detailsVentesSpecial.totalSoldeEuro);
-        } else {
-            console.warn('⚠️ Lignes insuffisantes:', lines.length);
-        }
-    } catch (error) {
-        console.error('❌ Erreur chargement tableau spécial:', error);
-    }
-}        // Charger toutes les données supplémentaires
+
+        // Charger toutes les données supplémentaires
        async function loadAutresSources() {
     try {
         console.log('Chargement des autres sources...');
@@ -2331,13 +2372,14 @@ async function loadDetailsVentesSpecial() {
         await loadMainSheet();
         
         // Charger les données supplémentaires en parallèle
-await Promise.all([
-    loadDetailsDepenses(),
-    loadDonsMembres(),
-    loadDetailsFromMainSheet(),
-    loadPreteursFromNewSource(),
-    loadDetailsVentesSpecial()   
-]);
+        await Promise.all([
+            loadDetailsDepenses(),
+            loadDonsMembres(),
+            loadDetailsFromMainSheet(),
+            loadPreteursFromNewSource(),
+            loadVentesDetails()  // AJOUT : Charger les détails ventes
+        ]);
+        
         // Charger la feuille Récap_gl
         const response = await fetch(AUTRES_SOURCES_URL);
         if (response.ok) {
@@ -3213,126 +3255,142 @@ await Promise.all([
             return symbols[currency] || '';
         }
 
-     function showDetailsVentes(event) {
-    const bulle = document.getElementById('detailsBulle');
-    const overlay = document.getElementById('detailsOverlay');
-    const content = document.getElementById('detailsBulleContent');
-    const titleElement = document.getElementById('bulleTitle');
-    
-    titleElement.textContent = '📋 DÉTAILS VENTES';
-    
-    let html = '';
-    
-    // Vérifier si les données spéciales sont chargées
-    const hasSpecialData = detailsVentesSpecial && 
-        (detailsVentesSpecial.vente.madaEuro !== 0 || 
-         detailsVentesSpecial.artisanat.madaEuro !== 0 ||
-         detailsVentesSpecial.totalSoldeEuro !== 0);
-    
-    if (!hasSpecialData) {
-        html += '<p style="text-align:center;color:#e74c3c; padding:20px;">⚠️ Chargement des données en cours...<br>Veuillez réessayer dans quelques instants.</p>';
-    }
-    
-    // Tableau des ventes par localité (existant)
-    if (detailsVentesData && detailsVentesData.length > 0) {
-        html += '<h4 style="color:#e74c3c;">📍 VENTES PAR LOCALITÉ</h4>';
-        html += '<table class="tiers-table">';
-        html += '<thead><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead><tbody>';
-        
-        let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
-        
-        detailsVentesData.forEach(item => {
-            html += '<tr>';
-            html += `<td>${item.localite}     `;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}     `;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}     `;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}     `;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}     `;
-            html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}     `;
-            html += '   ';
+        function showDetailsDon(event) {
+            if (event && event.detail !== 2) {
+                return;
+            }
             
-            totalAriary += item.Ariary;
-            totalEuro += item.Euro;
-            totalSuisse += item['Franc Suisse'];
-            totalLivre += item.Livre;
-            totalBanque += item['Banque Euro'];
-        });
-        
-        html += '<tr class="total-row">';
-        html += '<td><strong>TOTAL</strong>   ';
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>   `;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>   `;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</strong>   `;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>   `;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanque, 'Banque Euro')}</strong>   `;
-        html += '   ';
-        html += '</tbody>   ';
-    }
-    
-    // ========== NOUVEAU TABLEAU SPÉCIAL (Vente / Artisanat) ==========
-    html += '<h4 style="color:#2980b9; margin-top:20px; border-top:2px solid #2980b9; padding-top:15px;">📊 TABLEAU RÉCAPITULATIF VENTES & ARTISANAT</h4>';
-    html += '<div class="financial-table-container">';
-    html += '<table class="financial-table" style="font-size:12px;">';
-    html += '<thead>';
-    html += '   ';
-    html += '<th class="category">Catégorie</th>';
-    html += '<th>À Mada (en euro)</th>';
-    html += '<th>Euro</th>';
-    html += '<th>Franc suisse</th>';
-    html += '<th>Livre sterling</th>';
-    html += '<th>Banque en euro</th>';
-    html += '   ';
-    html += '</thead>';
-    html += '<tbody>';
-    
-    // Fonction pour ajouter une ligne
-    const addRow = (label, data, rowClass = '') => {
-        html += `<tr class="${rowClass}">`;
-        html += `<td class="category">${label}   `;
-        html += `   <td class="montant-cell">${formatNumberWithUnit(data.madaEuro || 0, 'Euro')}   `;
-        html += `   <td class="montant-cell">${formatNumberWithUnit(data.euro || 0, 'Euro')}   `;
-        html += `   <td class="montant-cell">${formatNumberWithUnit(data.francSuisse || 0, 'Franc Suisse')}   `;
-        html += `   <td class="montant-cell">${formatNumberWithUnit(data.livre || 0, 'Livre')}   `;
-        html += `   <td class="montant-cell">${formatNumberWithUnit(data.banqueEuro || 0, 'Banque Euro')}   `;
-        html += '   ';
-    };
-    
-    // Ajouter les lignes avec vérification des données
-    if (detailsVentesSpecial.vente) {
-        addRow('Vente', detailsVentesSpecial.vente);
-        addRow('Artisanat', detailsVentesSpecial.artisanat);
-        addRow('Total Entrée', detailsVentesSpecial.totalEntree, 'entree-row');
-        addRow('Total Sortie', detailsVentesSpecial.totalSortie, 'depense-row');
-        addRow('Solde (unité monétaire)', detailsVentesSpecial.soldeUnite, 'difference-row');
-        addRow('Solde converti en euro', detailsVentesSpecial.soldeEuro, 'total-row');
-        
-        // Ligne Total des soldes en euro
-        html += '<tr class="total-row" style="background-color:#d4edda; font-weight:bold;">';
-        html += '<td class="category"><strong>TOTAL SOLDES EN EURO</strong>   ';
-        html += `<td colspan="5"><strong>${formatNumberWithUnit(detailsVentesSpecial.totalSoldeEuro, 'Euro')}</strong>   `;
-        html += '   ';
-    } else {
-        html += '<tr><td colspan="6" style="text-align:center; color:red;">Données non disponibles</td></tr>';
-    }
-    
-    html += '</tbody>';
-    html += '   ';
-    html += '</div>';
-    
-    content.innerHTML = html;
-    
-    bulle.style.display = 'block';
-    overlay.style.display = 'block';
-    
-    const bulleWidth = bulle.offsetWidth;
-    const windowWidth = window.innerWidth;
-    let left = (windowWidth - bulleWidth) / 2;
-    if (left < 20) left = 20;
-    
-    bulle.style.left = left + 'px';
-    bulle.style.top = '20px';
-}
+            const bulle = document.getElementById('detailsBulle');
+            const overlay = document.getElementById('detailsOverlay');
+            const content = document.getElementById('detailsBulleContent');
+            const titleElement = document.getElementById('bulleTitle');
+            
+            titleElement.textContent = '📋 DÉTAILS DONS';
+            
+            let html = '<h4 style="color: #e74c3c; margin-bottom: 10px;">RÉCAPITULATIF DONS REÇUS</h4>';
+            
+            if (detailsDonData.length === 0) {
+                html += '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            } else {
+                html += '<table class="financial-table">';
+                html += '<thead><th>Type de don</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead>';
+                
+                let totaux = {
+                    'Ariary': 0, 'Euro': 0, 'Franc Suisse': 0, 'Livre': 0, 'Banque Euro': 0
+                };
+                
+                detailsDonData.forEach(item => {
+                    html += '\(tr\)';
+                    html += `    <td>${item['Type']}</td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}</td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Euro'], 'Euro')}</td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Livre'], 'Livre')}</td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '  </tr>';
+                    
+                    totaux['Ariary'] += item['Ariary'];
+                    totaux['Euro'] += item['Euro'];
+                    totaux['Franc Suisse'] += item['Franc Suisse'];
+                    totaux['Livre'] += item['Livre'];
+                    totaux['Banque Euro'] += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '    <td>TOTAL DONS REÇUS</td>';
+                html += `    <td>${formatNumberWithUnit(totaux['Ariary'], 'Ariary')}</td>`;
+                html += `    <td>${formatNumberWithUnit(totaux['Euro'], 'Euro')}</td>`;
+                html += `    <td>${formatNumberWithUnit(totaux['Franc Suisse'], 'Franc Suisse')}</td>`;
+                html += `    <td>${formatNumberWithUnit(totaux['Livre'], 'Livre')}</td>`;
+                html += `    <td>${formatNumberWithUnit(totaux['Banque Euro'], 'Banque Euro')}</td>`;
+                html += '  </tr>';
+                
+                html += '</table>';
+            }
+            
+            if (donsParLocaliteData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>📍 DONS PAR LOCALITÉ</h4>';
+                html += '<table class="tiers-table">';
+                html += '<thead><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead>';
+                
+                let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
+                
+                donsParLocaliteData.forEach(item => {
+                    html += '   <tr>';
+                    html += `    <td>${item.localite}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '  </tr>';
+                    
+                    totalAriary += item.Ariary;
+                    totalEuro += item.Euro;
+                    totalSuisse += item['Franc Suisse'];
+                    totalLivre += item.Livre;
+                    totalBanque += item['Banque Euro'];
+                });
+                
+                html += '<tr class="total-row">';
+                html += '    <td>TOTAL</td>';
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '  </tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            if (donsMembresData.length > 0) {
+                html += '<div class="tiers-section">';
+                html += '<h4>👥 DÉTAILS DONS PAR MEMBRE</h4>';
+                html += '<table class="tiers-table">';
+                html += '<thead><th>Membre</th><th>Promesse</th><th>Payé</th><th>Reste</th></thead>';
+                
+                let totalPromesse = 0, totalPaye = 0, totalReste = 0;
+                
+                donsMembresData.forEach(item => {
+                    html += '   <tr>';
+                    html += `    <td>${item.membre}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.promesse, 'Euro')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.paye, 'Euro')}</td>`;
+                    html += `    <td class="montant-cell">${formatNumberWithUnit(item.reste, 'Euro')}</td>`;
+                    html += '  </tr>';
+                    
+                    totalPromesse += item.promesse;
+                    totalPaye += item.paye;
+                    totalReste += item.reste;
+                });
+                
+                html += '<tr class="total-row">';
+                html += '    <td>TOTAL</td>';
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalPromesse, 'Euro')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalPaye, 'Euro')}</td>`;
+                html += `    <td class="montant-cell">${formatNumberWithUnit(totalReste, 'Euro')}</td>`;
+                html += '  </tr>';
+                html += '</table>';
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+            
+            bulle.style.display = 'block';
+            overlay.style.display = 'block';
+            
+            const bulleWidth = bulle.offsetWidth;
+            const windowWidth = window.innerWidth;
+            let left = (windowWidth - bulleWidth) / 2;
+            if (left < 20) left = 20;
+            
+            bulle.style.left = left + 'px';
+            bulle.style.top = '20px';
+        }
 
+        // NOUVELLE FONCTION : showDetailsVentes avec le tableau complet
         function showDetailsVentes(event) {
             const bulle = document.getElementById('detailsBulle');
             const overlay = document.getElementById('detailsOverlay');
@@ -3341,22 +3399,75 @@ await Promise.all([
             
             titleElement.textContent = '📋 DÉTAILS VENTES';
             
-            if (detailsVentesData.length === 0) {
-                content.innerHTML = '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
+            let html = '<h4 style="color: #e74c3c; margin-bottom: 10px;">TABLEAU DES VENTES ET ARTISANAT</h4>';
+            
+            if (!ventesDetailsComplet || ventesDetailsComplet.length === 0) {
+                html += '<p style="text-align:center;color:#e74c3c;">Aucune donnée disponible</p>';
             } else {
-                let html = '<table class="tiers-table">';
+                // En-têtes des colonnes selon le format demandé
+                html += '<div class="financial-table-container">';
+                html += '<table class="financial-table">';
+                html += '<thead>';
+                html += '  <th>Catégorie</th>';
+                html += '  <th>À Mada (en euro)</th>';
+                html += '  <th>Euro</th>';
+                html += '  <th>Franc suisse</th>';
+                html += '  <th>Livre sterling</th>';
+                html += '  <th>Banque en euro</th>';
+                html += '</thead>';
+                html += '<tbody>';
+                
+                // Afficher les données (Vente, Artisanat, Total Entrées, Total Sorties, etc.)
+                for (let i = 0; i < ventesDetailsComplet.length; i++) {
+                    const item = ventesDetailsComplet[i];
+                    let rowClass = '';
+                    
+                    if (item.categorie === 'Total Entrées') rowClass = 'entree-row';
+                    else if (item.categorie === 'Total Sorties') rowClass = 'depense-row';
+                    else if (item.categorie === 'Solde (par unité monétaire)') rowClass = 'difference-row';
+                    else if (item.categorie === 'Valeurs converties en euro') rowClass = 'difference-row';
+                    else if (item.categorie === 'Tous les soldes en euro') rowClass = 'difference-row';
+                    else if (item.categorie === 'TOTAL DES SOLDES EN EURO') rowClass = 'total-row';
+                    
+                    html += `<tr class="${rowClass}">`;
+                    html += `<td class="category">${item.categorie}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Ariary, 'Euro')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Euro, 'Euro')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
+                    html += '</tr>';
+                }
+                
+                html += '</tbody>';
+                html += '</table>';
+                html += '</div>';
+                
+                // Ajouter une note explicative
+                html += '<p style="text-align:center; margin-top:15px; font-size:12px; color:#7f8c8d;">';
+                html += '<i class="fas fa-info-circle"></i> Données basées sur la feuille des ventes (gid=1469962647)';
+                html += '</p>';
+            }
+            
+            // Ajouter les ventes par localité si disponibles
+            if (detailsVentesData && detailsVentesData.length > 0) {
+                html += '<div class="tiers-section" style="margin-top: 20px;">';
+                html += '<h4 style="color: #e74c3c;">📍 VENTES PAR LOCALITÉ (détail)</h4>';
+                html += '<div class="financial-table-container">';
+                html += '<table class="financial-table">';
                 html += '<thead><th>Localité</th><th>Ariary</th><th>Euro</th><th>Franc Suisse</th><th>Livre</th><th>Banque Euro</th></thead>';
+                html += '<tbody>';
                 
                 let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
                 
                 detailsVentesData.forEach(item => {
-                    html += '<tr>';
-                    html += `<td>${item.localite}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '   <tr>';
+                    html += `<td class="category">${item.localite}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Ariary, 'Ariary')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Euro, 'Euro')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
+                    html += `<td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
                     html += '</tr>';
                     
                     totalAriary += item.Ariary;
@@ -3367,17 +3478,21 @@ await Promise.all([
                 });
                 
                 html += '<tr class="total-row">';
-                html += '<td>TOTAL</td>';
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += '<td class="category"><strong>TOTAL VENTES</strong>    </td>';
+                html += `<td><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>    </td>`;
+                html += `<td><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>    </td>`;
+                html += `<td><strong>${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</strong>    </td>`;
+                html += `<td><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>    </td>`;
+                html += `<td><strong>${formatNumberWithUnit(totalBanque, 'Banque Euro')}</strong>    </td>`;
                 html += '</tr>';
                 
+                html += '</tbody>';
                 html += '</table>';
-                content.innerHTML = html;
+                html += '</div>';
+                html += '</div>';
             }
+            
+            content.innerHTML = html;
             
             bulle.style.display = 'block';
             overlay.style.display = 'block';
@@ -3408,13 +3523,13 @@ await Promise.all([
                 let totalAriary = 0, totalEuro = 0, totalSuisse = 0, totalLivre = 0, totalBanque = 0;
                 
                 detailsCollectesData.forEach(item => {
-                    html += '<tr>';
-                    html += `<td>${item.localite}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}</td>`;
-                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}</td>`;
+                    html += '   <tr>';
+                    html += `<td>${item.localite}    </td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}    </td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}    </td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
+                    html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
                     html += '</tr>';
                     
                     totalAriary += item.Ariary;
@@ -3426,11 +3541,11 @@ await Promise.all([
                 
                 html += '<tr class="total-row">';
                 html += '<td>TOTAL</td>';
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}</td>`;
-                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}</td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalAriary, 'Ariary')}    </td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalEuro, 'Euro')}    </td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}    </td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}    </td>`;
+                html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}    </td>`;
                 html += '</tr>';
                 
                 html += '</table>';
@@ -3468,7 +3583,7 @@ await Promise.all([
         html += '<div class="financial-table-container">';
         html += '<table class="financial-table">';
         html += '<thead>';
-        html += '     <tr>';
+        html += '      <tr>';
         html += '    <th class="category" style="width:80px; min-width:80px;">Libellé</th>';
         html += '    <th class="entree-col">Ariary<br>Entrée</th>';
         html += '    <th>Ariary<br>Sortie</th>';
@@ -3480,7 +3595,7 @@ await Promise.all([
         html += '    <th>Livre<br>Sortie</th>';
         html += '    <th class="entree-col">Banque Euro<br>Entrée</th>';
         html += '    <th>Banque Euro<br>Sortie</th>';
-        html += '     </tr>';
+        html += '      </tr>';
         html += '</thead>';
         html += '<tbody>';
         
@@ -3502,19 +3617,19 @@ await Promise.all([
             const banqueEntree = item['Banque Euro Entrée'] || 0;
             const banqueSortie = item['Banque Euro Sortie'] || 0;
             
-            html += '     <tr>';
+            html += '      <tr>';
             html += `    <td class="category" style="text-align:left; word-break:break-word; white-space:normal;">${item.libelle}</td>`;
             html += `    <td class="entree-col">${formatNumberWithUnit(ariaryEntree, 'Ariary')}</td>`;
-            html += `     <td>${formatNumberWithUnit(ariarySortie, 'Ariary')}</td>`;
+            html += `      <td>${formatNumberWithUnit(ariarySortie, 'Ariary')}</td>`;
             html += `    <td class="entree-col">${formatNumberWithUnit(euroEntree, 'Euro')}</td>`;
-            html += `     <td>${formatNumberWithUnit(euroSortie, 'Euro')}</td>`;
+            html += `      <td>${formatNumberWithUnit(euroSortie, 'Euro')}</td>`;
             html += `    <td class="entree-col">${formatNumberWithUnit(chfEntree, 'Franc Suisse')}</td>`;
-            html += `     <td>${formatNumberWithUnit(chfSortie, 'Franc Suisse')}</td>`;
+            html += `      <td>${formatNumberWithUnit(chfSortie, 'Franc Suisse')}</td>`;
             html += `    <td class="entree-col">${formatNumberWithUnit(livreEntree, 'Livre')}</td>`;
-            html += `     <td>${formatNumberWithUnit(livreSortie, 'Livre')}</td>`;
+            html += `      <td>${formatNumberWithUnit(livreSortie, 'Livre')}</td>`;
             html += `    <td class="entree-col">${formatNumberWithUnit(banqueEntree, 'Banque Euro')}</td>`;
-            html += `     <td>${formatNumberWithUnit(banqueSortie, 'Banque Euro')}</td>`;
-            html += '     </tr>';
+            html += `      <td>${formatNumberWithUnit(banqueSortie, 'Banque Euro')}</td>`;
+            html += '      </tr>';
             
             totalAriaryEntree += ariaryEntree;
             totalAriarySortie += ariarySortie;
@@ -3530,18 +3645,18 @@ await Promise.all([
         
         // Ligne total
         html += '<tr class="total-row">';
-        html += '   <td class="category"><strong>TOTAL</strong>   </td>';
-        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</strong>   </td>`;
-        html += `      <td><strong>${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</strong>   </td>`;
-        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalEuroEntree, 'Euro')}</strong>   </td>`;
-        html += `      <td><strong>${formatNumberWithUnit(totalEuroSortie, 'Euro')}</strong>   </td>`;
-        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalCHFEntree, 'Franc Suisse')}</strong>   </td>`;
-        html += `      <td><strong>${formatNumberWithUnit(totalCHFSortie, 'Franc Suisse')}</strong>   </td>`;
-        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalLivreEntree, 'Livre')}</strong>   </td>`;
-        html += `      <td><strong>${formatNumberWithUnit(totalLivreSortie, 'Livre')}</strong>   </td>`;
-        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalBanqueEntree, 'Banque Euro')}</strong>   </td>`;
-        html += `      <td><strong>${formatNumberWithUnit(totalBanqueSortie, 'Banque Euro')}</strong>   </td>`;
-        html += '   </tr>';
+        html += '   <td class="category"><strong>TOTAL</strong>    </td>';
+        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalAriaryEntree, 'Ariary')}</strong>    </td>`;
+        html += `       <td><strong>${formatNumberWithUnit(totalAriarySortie, 'Ariary')}</strong>    </td>`;
+        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalEuroEntree, 'Euro')}</strong>    </td>`;
+        html += `       <td><strong>${formatNumberWithUnit(totalEuroSortie, 'Euro')}</strong>    </td>`;
+        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalCHFEntree, 'Franc Suisse')}</strong>    </td>`;
+        html += `       <td><strong>${formatNumberWithUnit(totalCHFSortie, 'Franc Suisse')}</strong>    </td>`;
+        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalLivreEntree, 'Livre')}</strong>    </td>`;
+        html += `       <td><strong>${formatNumberWithUnit(totalLivreSortie, 'Livre')}</strong>    </td>`;
+        html += `   <td class="entree-col"><strong>${formatNumberWithUnit(totalBanqueEntree, 'Banque Euro')}</strong>    </td>`;
+        html += `       <td><strong>${formatNumberWithUnit(totalBanqueSortie, 'Banque Euro')}</strong>    </td>`;
+        html += '    </tr>';
         
         html += '</tbody>';
         html += '</table>';
@@ -3599,13 +3714,13 @@ await Promise.all([
                 for (let i = 0; i < detailsDepensesData.length - 1; i++) {
                     const item = detailsDepensesData[i];
                     html += `<tr class="detail-item" onclick="showCategorieDepense(event, '${item['Depenses']}')" title="Cliquez pour voir les détails">`;
-                    html += `   <td>${item['Depenses']}   </td>`;
-                    html += `   <td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}   </td>`;
-                    html += `   <td>${formatNumberWithUnit(item['Euro'], 'Euro')}   </td>`;
-                    html += `   <td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}   </td>`;
-                    html += `   <td>${formatNumberWithUnit(item['Livre'], 'Livre')}   </td>`;
-                    html += `   <td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}   </td>`;
-                    html += '   </tr>';
+                    html += `    <td>${item['Depenses']}    </td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Ariary'], 'Ariary')}    </td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Euro'], 'Euro')}    </td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Livre'], 'Livre')}    </td>`;
+                    html += `    <td>${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
+                    html += '    </tr>';
                     
                     totaux['Ariary'] += item['Ariary'];
                     totaux['Euro'] += item['Euro'];
@@ -3616,13 +3731,13 @@ await Promise.all([
                 
                 const totalItem = detailsDepensesData[detailsDepensesData.length - 1];
                 html += '<tr class="total-row" style="background-color: #ffa500 !important; font-weight: bold;">';
-                html += `   <td>${totalItem['Depenses']}   </td>`;
-                html += `   <td>${formatNumberWithUnit(totalItem['Ariary'], 'Ariary')}   </td>`;
-                html += `   <td>${formatNumberWithUnit(totalItem['Euro'], 'Euro')}   </td>`;
-                html += `   <td>${formatNumberWithUnit(totalItem['Franc Suisse'], 'Franc Suisse')}   </td>`;
-                html += `   <td>${formatNumberWithUnit(totalItem['Livre'], 'Livre')}   </td>`;
-                html += `   <td>${formatNumberWithUnit(totalItem['Banque Euro'], 'Banque Euro')}   </td>`;
-                html += '   </tr>';
+                html += `    <td>${totalItem['Depenses']}    </td>`;
+                html += `    <td>${formatNumberWithUnit(totalItem['Ariary'], 'Ariary')}    </td>`;
+                html += `    <td>${formatNumberWithUnit(totalItem['Euro'], 'Euro')}    </td>`;
+                html += `    <td>${formatNumberWithUnit(totalItem['Franc Suisse'], 'Franc Suisse')}    </td>`;
+                html += `    <td>${formatNumberWithUnit(totalItem['Livre'], 'Livre')}    </td>`;
+                html += `    <td>${formatNumberWithUnit(totalItem['Banque Euro'], 'Banque Euro')}    </td>`;
+                html += '    </tr>';
                 
                 html += '</table>';
                 
@@ -3670,24 +3785,24 @@ await Promise.all([
     else if (title === 'Transfert') libelleMontant = 'Transfert reçu (total)';
     else if (title === 'Change') libelleMontant = 'Change reçu (total)';
     
-    html += '      <tr>';
-    html += `  <td class="category">${libelleMontant}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Ariary || 0, 'Ariary')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Euro || 0, 'Euro')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant['Franc Suisse'] || 0, 'Franc Suisse')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}   </td>`;
-    html += '    </tr>';
+    html += '       <tr>';
+    html += `  <td class="category">${libelleMontant}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Ariary || 0, 'Ariary')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Euro || 0, 'Euro')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant['Franc Suisse'] || 0, 'Franc Suisse')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant.Livre || 0, 'Livre')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.montant['Banque Euro'] || 0, 'Banque Euro')}    </td>`;
+    html += '     </tr>';
     
     // Remboursement
-    html += '      <tr>';
-    html += `  <td class="category">Remboursement ${title}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Ariary || 0, 'Ariary')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Euro || 0, 'Euro')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement['Franc Suisse'] || 0, 'Franc Suisse')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}   </td>`;
-    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}   </td>`;
-    html += '    </tr>';
+    html += '       <tr>';
+    html += `  <td class="category">Remboursement ${title}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Ariary || 0, 'Ariary')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Euro || 0, 'Euro')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement['Franc Suisse'] || 0, 'Franc Suisse')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement.Livre || 0, 'Livre')}    </td>`;
+    html += `  <td class="montant-cell">${formatNumberWithUnit(data.remboursement['Banque Euro'] || 0, 'Banque Euro')}    </td>`;
+    html += '     </tr>';
     
     // Solde
     const soldeAriary = (data.montant.Ariary || 0) - (data.remboursement.Ariary || 0);
@@ -3697,13 +3812,13 @@ await Promise.all([
     const soldeBanqueEuro = (data.montant['Banque Euro'] || 0) - (data.remboursement['Banque Euro'] || 0);
     
     html += '<tr class="total-row">';
-    html += '<td class="category"><strong>SOLDE</strong>   </td>';
-    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeAriary, 'Ariary')}</strong>   </td>`;
-    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeEuro, 'Euro')}</strong>   </td>`;
-    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeFrancSuisse, 'Franc Suisse')}</strong>   </td>`;
-    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeLivre, 'Livre')}</strong>   </td>`;
-    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeBanqueEuro, 'Banque Euro')}</strong>   </td>`;
-    html += '   </tr>';
+    html += '<td class="category"><strong>SOLDE</strong>    </td>';
+    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeAriary, 'Ariary')}</strong>    </td>`;
+    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeEuro, 'Euro')}</strong>    </td>`;
+    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeFrancSuisse, 'Franc Suisse')}</strong>    </td>`;
+    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeLivre, 'Livre')}</strong>    </td>`;
+    html += `<td class="montant-cell"><strong>${formatNumberWithUnit(soldeBanqueEuro, 'Banque Euro')}</strong>    </td>`;
+    html += '    </tr>';
     
     html += '</tbody></table>';
     html += '</div>';
@@ -3730,16 +3845,16 @@ await Promise.all([
         let totalAriary = 0, totalAriaryEnEuro = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0, totalGeneralEuro = 0;
         
         preteursFromNewSource.forEach(item => {
-            html += '      <tr>';
-            html += `  <td class="category" style="text-align:left;">${item.tiers}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.AriaryEnEuro, 'Euro')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}   </td>`;
-            html += `  <td class="montant-cell"><strong>${formatNumberWithUnit(item['Total Euro'], 'Euro')}</strong>   </td>`;
-            html += '    </tr>';
+            html += '       <tr>';
+            html += `  <td class="category" style="text-align:left;">${item.tiers}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.AriaryEnEuro, 'Euro')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
+            html += `  <td class="montant-cell"><strong>${formatNumberWithUnit(item['Total Euro'], 'Euro')}</strong>    </td>`;
+            html += '     </tr>';
             
             totalAriary += item.Ariary;
             totalAriaryEnEuro += item.AriaryEnEuro;
@@ -3751,15 +3866,15 @@ await Promise.all([
         });
         
         html += '<tr class="total-row" style="background-color: #ffa500;">';
-        html += '<td class="category"><strong>TOTAL GÉNÉRAL</strong>   </td>';
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriaryEnEuro, 'Euro')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalGeneralEuro, 'Euro')}</strong>   </td>`;
-        html += '   </tr>';
+        html += '<td class="category"><strong>TOTAL GÉNÉRAL</strong>    </td>';
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriaryEnEuro, 'Euro')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalGeneralEuro, 'Euro')}</strong>    </td>`;
+        html += '    </tr>';
         
         html += '</tbody></table>';
         html += '</div>';
@@ -3781,14 +3896,14 @@ await Promise.all([
         let totalAriary = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0;
         
         detailsPretTiersData.forEach(item => {
-            html += '      <tr>';
-            html += `  <td class="category" style="text-align:left;">${item.tiers}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}   </td>`;
-            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}   </td>`;
-            html += '    </tr>';
+            html += '       <tr>';
+            html += `  <td class="category" style="text-align:left;">${item.tiers}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Ariary, 'Ariary')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Euro, 'Euro')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
+            html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
+            html += '     </tr>';
             
             totalAriary += item.Ariary;
             totalEuro += item.Euro;
@@ -3798,13 +3913,13 @@ await Promise.all([
         });
         
         html += '<tr class="total-row" style="background-color: #ffa500;">';
-        html += '<td class="category"><strong>TOTAL GÉNÉRAL</strong>   </td>';
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>   </td>`;
-        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong>   </td>`;
-        html += '   </tr>';
+        html += '<td class="category"><strong>TOTAL GÉNÉRAL</strong>    </td>';
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalAriary, 'Ariary')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalEuro, 'Euro')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalFrancSuisse, 'Franc Suisse')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalLivre, 'Livre')}</strong>    </td>`;
+        html += `<td class="montant-cell"><strong>${formatNumberWithUnit(totalBanqueEuro, 'Banque Euro')}</strong>    </td>`;
+        html += '    </tr>';
         
         html += '</tbody></table>';
         html += '</div>';
@@ -3898,11 +4013,11 @@ await Promise.all([
 
             let html = '<table class="financial-table">';
             
-            html += ' <thead> <tr><th class="category">Catégorie</th>';
+            html += ' <thead>  <tr><th class="category">Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
-            html += '   </tr></thead><tbody>';
+            html += '    </tr></thead><tbody>';
             
             const categories = ['Ventes', 'Collecte', 'Don', 'Report', 'Depenses'];
             categories.forEach(category => {
@@ -3925,7 +4040,7 @@ await Promise.all([
                     rowClass = 'report-row';
                 }
                 
-                html += `<tr class="${rowClass}" ${clickHandler}><td class="category">${category}   </td>`;
+                html += `<tr class="${rowClass}" ${clickHandler}><td class="category">${category}    </td>`;
                 Object.keys(columnMapping).forEach(currency => {
                     let value = 0;
                     if (category === 'Depenses') {
@@ -3935,62 +4050,62 @@ await Promise.all([
                     } else {
                         value = globalTotals[currency][category];
                     }
-                    html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                    html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
                 });
-                html += '   </tr>';
+                html += '    </tr>';
             });
             
-            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES   </td>';
+            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES    </td>';
             Object.keys(columnMapping).forEach(currency => {
                 const recettes = globalTotals[currency]['Ventes'] + globalTotals[currency]['Collecte'] + globalTotals[currency]['Don'] + reportValues[currency];
-                html += `   <td>${formatNumberWithUnit(recettes, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(recettes, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES   </td>';
+            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES    </td>';
             Object.keys(columnMapping).forEach(currency => {
                 const depenses = depensesTotales[currency];
-                html += `   <td>${formatNumberWithUnit(depenses, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(depenses, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES   </td>';
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES    </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `   <td>${formatNumberWithUnit(fondsPropres[currency], currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(fondsPropres[currency], currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES   </td></tr>';
+            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">AUTRES RESSOURCES ET DEPENSES    </td></tr>';
             
-            html += `<tr class="emprunt-row" ondblclick="showDetailsBulle(event, 'Emprunt', detailsEmpruntData)"><td class="category">Emprunt   </td>`;
+            html += `<tr class="emprunt-row" ondblclick="showDetailsBulle(event, 'Emprunt', detailsEmpruntData)"><td class="category">Emprunt    </td>`;
             Object.keys(columnMapping).forEach(currency => {
                 const value = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
-                html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += `<tr class="pret-row" ondblclick="showDetailsBulle(event, 'Prêt', detailsPretData)"><td class="category">Prêt   </td>`;
+            html += `<tr class="pret-row" ondblclick="showDetailsBulle(event, 'Prêt', detailsPretData)"><td class="category">Prêt    </td>`;
             Object.keys(columnMapping).forEach(currency => {
                 const value = autresSourcesData['Pret'] ? autresSourcesData['Pret'][currency] || 0 : 0;
-                html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += `<tr class="transfert-row" ondblclick="showDetailsBulle(event, 'Transfert', detailsTransfertData)"><td class="category">Transfert   </td>`;
+            html += `<tr class="transfert-row" ondblclick="showDetailsBulle(event, 'Transfert', detailsTransfertData)"><td class="category">Transfert    </td>`;
             Object.keys(columnMapping).forEach(currency => {
                 const value = autresSourcesData['Transfert'] ? autresSourcesData['Transfert'][currency] || 0 : 0;
-                html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-            html += `<tr class="change-row" ondblclick="showDetailsBulle(event, 'Change', detailsChangeData)"><td class="category">Change   </td>`;
+            html += `<tr class="change-row" ondblclick="showDetailsBulle(event, 'Change', detailsChangeData)"><td class="category">Change    </td>`;
             Object.keys(columnMapping).forEach(currency => {
                 const value = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
-                html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
             });
-            html += '   </tr>';
+            html += '    </tr>';
             
-           html += '<tr class="en-main-row"><td class="category">EN MAIN   </td>';
+           html += '<tr class="en-main-row"><td class="category">EN MAIN    </td>';
 Object.keys(columnMapping).forEach(currency => {
     const fondsPropresValue = fondsPropres[currency];
     const emprunt = autresSourcesData['Emprunt'] ? autresSourcesData['Emprunt'][currency] || 0 : 0;
@@ -3999,11 +4114,11 @@ Object.keys(columnMapping).forEach(currency => {
     const change = autresSourcesData['Change'] ? autresSourcesData['Change'][currency] || 0 : 0;
     
     const enMain = fondsPropresValue + emprunt + pret + transfert + change;
-    html += `   <td>${formatNumberWithUnit(enMain, currency)}   </td>`;
+    html += `    <td>${formatNumberWithUnit(enMain, currency)}    </td>`;
 });
 html += '</tr>';
             
-            html += '</tbody></table>';
+            html += '</tbody> </table>';
             
             statsSection.innerHTML = html;
         }
@@ -4095,67 +4210,67 @@ html += '</tr>';
             html += '<div class="financial-table-container">';
             html += '<table class="financial-table">';
             
-            html += ' <thead> <tr><th class="category">Catégorie</th>';
+            html += ' <thead>  <tr><th class="category">Catégorie</th>';
             Object.keys(columnMapping).forEach(currency => {
                 html += `<th>${currency}</th>`;
             });
-            html += '   </tr></thead><tbody>';
+            html += '    </tr></thead><tbody>';
             
             const categories = ['Ventes', 'Collecte', 'Don', 'Depenses'];
             categories.forEach(category => {
-                html += `   <tr><td class="category">${category}   </td>`;
+                html += `    <tr><td class="category">${category}    </td>`;
                 Object.keys(columnMapping).forEach(currency => {
                     const value = totals[currency][category];
-                    html += `   <td>${formatNumberWithUnit(value, currency)}   </td>`;
+                    html += `    <td>${formatNumberWithUnit(value, currency)}    </td>`;
                 });
-                html += '    </div>';
+                html += '    </tr>';
             });
             
-            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES    ';
+            html += '<tr class="recettes-row"><td class="category">RECETTES TOTALES    </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}    `;
+                html += `    <td>${formatNumberWithUnit(totals[currency]['Recettes'], currency)}    </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
             
-            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES    ';
+            html += '<tr class="depenses-row"><td class="category">DEPENSES TOTALES    </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(totals[currency]['Depenses'], currency)}    `;
+                html += `    <td>${formatNumberWithUnit(totals[currency]['Depenses'], currency)}    </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
             
-            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES    ';
+            html += '<tr class="fonds-propre-row"><td class="category">FONDS PROPRES    </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}    `;
+                html += `    <td>${formatNumberWithUnit(totals[currency]['FondsPropres'], currency)}    </td>`;
             });
-            html += '     </div>';
+            html += '    </tr>';
             
-            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">OPÉRATIONS DU JOUR     </div>';
+            html += '<tr class="autres-header"><td colspan="6" style="text-align:center;">OPÉRATIONS DU JOUR    </td></tr>';
             
-            html += '   <td class="category">Emprunt (jour)   ';
+            html += '   <tr><td class="category">Emprunt (jour)   </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(empruntLocal[currency], currency)}   `;
+                html += `    <td>${formatNumberWithUnit(empruntLocal[currency], currency)}   </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
             
-            html += '   <td class="category">Prêt (jour)   ';
+            html += '   <tr><td class="category">Prêt (jour)   </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(pretLocal[currency], currency)}   `;
+                html += `    <td>${formatNumberWithUnit(pretLocal[currency], currency)}   </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
             
-            html += '   <td class="category">Transfert (jour)   ';
+            html += '   <tr><td class="category">Transfert (jour)   </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(transfertLocal[currency], currency)}   `;
+                html += `    <td>${formatNumberWithUnit(transfertLocal[currency], currency)}   </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
             
-            html += '   <td class="category">Change (jour)   ';
+            html += '   <tr><td class="category">Change (jour)   </td>';
             Object.keys(columnMapping).forEach(currency => {
-                html += `    <td>${formatNumberWithUnit(changeLocal[currency], currency)}   `;
+                html += `    <td>${formatNumberWithUnit(changeLocal[currency], currency)}   </td>`;
             });
-            html += '    </div>';
+            html += '    </tr>';
 
-            html += '</tbody>  </table>';
+            html += '</tbody>   </table>';
             html += '</div>';
             
             return html;
@@ -4309,7 +4424,7 @@ html += '</tr>';
                 <div class="table-scroll-container">
                     <table class="country-summary-table">
                         <thead>
-                              <tr>
+                               <tr>
                                 <th rowspan="2">Date</th>
                                 <th colspan="4" class="currency-header">${mainCurrencyLabel}</th>
             `;
@@ -4320,7 +4435,7 @@ html += '</tr>';
             
             html += `
                                 <th colspan="4" class="currency-header">Banque Euro</th>
-                              </tr>
+                               </tr>
                             <tr class="sub-header">
                                 <th>Ventes</th>
                                 <th>Collecte</th>
@@ -4342,7 +4457,7 @@ html += '</tr>';
                                 <th>Collecte</th>
                                 <th>Don</th>
                                 <th>Dépenses</th>
-                              </tr>
+                               </tr>
                         </thead>
                         <tbody>
             `;
@@ -4387,7 +4502,7 @@ html += '</tr>';
                 totalBanqueDepenses += banqueDepenses;
                 
                 html += `
-                      <tr>
+                       <tr>
                         <td class="date-cell">${dateStr}    </td>
                          <td>${formatNumberWithUnit(mainVentes, mainCurrency)}    </td>
                          <td>${formatNumberWithUnit(mainCollecte, mainCurrency)}    </td>
@@ -4409,7 +4524,7 @@ html += '</tr>';
                          <td>${formatNumberWithUnit(banqueCollecte, 'Banque Euro')}    </td>
                          <td>${formatNumberWithUnit(banqueDon, 'Banque Euro')}    </td>
                          <td>${formatNumberWithUnit(banqueDepenses, 'Banque Euro')}    </td>
-                      </tr>
+                       </tr>
                 `;
             });
             
@@ -4436,12 +4551,12 @@ html += '</tr>';
                      <td>${formatNumberWithUnit(totalBanqueCollecte, 'Banque Euro')}    </td>
                      <td>${formatNumberWithUnit(totalBanqueDon, 'Banque Euro')}    </td>
                      <td>${formatNumberWithUnit(totalBanqueDepenses, 'Banque Euro')}    </td>
-                  </tr>
+                   </tr>
             `;
             
             html += `
                         </tbody>
-                      </table>
+                       </table>
                 </div>
             `;
             
@@ -4499,166 +4614,6 @@ html += '</tr>';
                 showTemporaryMessage('❌ Erreur lors de la génération du PDF', 'error');
             }
         }
-// NOUVELLE FONCTION : Charger les données de vente/artisanat
-async function loadVentesArtisanatData() {
-    try {
-        console.log('Chargement des données ventes/artisanat...');
-        const ventesArtisanatUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
-        
-        const response = await fetch(ventesArtisanatUrl);
-        if (!response.ok) {
-            throw new Error(`Erreur chargement ventes/artisanat: ${response.status}`);
-        }
-        
-        const csvText = await response.text();
-        const lines = parseCSV(csvText);
-        
-        console.log('Données ventes/artisanat chargées:', lines.length, 'lignes');
-        
-        // Structure pour stocker les données
-        window.ventesArtisanatData = {
-            // Ligne 3: Vente (index 2 = ligne 3)
-            ventes: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 4: Artisanat (index 3 = ligne 4)
-            artisanat: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 6: Total des entrées
-            totalEntrees: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 7: Total des sorties
-            totalSorties: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 8: Solde suivant unité monétaire
-            soldeUnite: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 9: Valeurs converties en euro
-            valeursConverties: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            // Ligne 10: Tous les soldes en euro
-            soldesEuro: {
-                'À Mada (en euro)': 0,
-                'Euro': 0,
-                'Franc suisse': 0,
-                'Livre sterling': 0,
-                'Banque en euro': 0
-            },
-            totalSoldesEuro: 0  // C12
-        };
-        
-        // Extraire les données
-        for (let i = 0; i < lines.length; i++) {
-            const row = lines[i];
-            if (!row) continue;
-            
-            // Ligne 3: Vente (index 2)
-            if (i === 2 && row[1] && row[1].toLowerCase().includes('vente')) {
-                window.ventesArtisanatData.ventes['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.ventes['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.ventes['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.ventes['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.ventes['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-                console.log('✅ Ventes chargées:', window.ventesArtisanatData.ventes);
-            }
-            
-            // Ligne 4: Artisanat (index 3)
-            if (i === 3 && row[1] && row[1].toLowerCase().includes('artisanat')) {
-                window.ventesArtisanatData.artisanat['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.artisanat['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.artisanat['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.artisanat['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.artisanat['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-                console.log('✅ Artisanat chargé:', window.ventesArtisanatData.artisanat);
-            }
-            
-            // Ligne 6: Total des entrées (index 5)
-            if (i === 5 && row[1] && row[1].toLowerCase().includes('total')) {
-                window.ventesArtisanatData.totalEntrees['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.totalEntrees['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.totalEntrees['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.totalEntrees['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.totalEntrees['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 7: Total des sorties (index 6)
-            if (i === 6 && row[1] && row[1].toLowerCase().includes('sortie')) {
-                window.ventesArtisanatData.totalSorties['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.totalSorties['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.totalSorties['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.totalSorties['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.totalSorties['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 8: Solde suivant unité monétaire (index 7)
-            if (i === 7 && row[1] && row[1].toLowerCase().includes('solde')) {
-                window.ventesArtisanatData.soldeUnite['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.soldeUnite['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.soldeUnite['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.soldeUnite['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.soldeUnite['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 9: Valeurs converties en euro (index 8)
-            if (i === 8 && row[1] && row[1].toLowerCase().includes('converti')) {
-                window.ventesArtisanatData.valeursConverties['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.valeursConverties['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.valeursConverties['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.valeursConverties['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.valeursConverties['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 10: Tous les soldes en euro (index 9)
-            if (i === 9 && row[1] && row[1].toLowerCase().includes('solde')) {
-                window.ventesArtisanatData.soldesEuro['À Mada (en euro)'] = parseFloat(cleanNumber(row[2] || '0'));
-                window.ventesArtisanatData.soldesEuro['Euro'] = parseFloat(cleanNumber(row[3] || '0'));
-                window.ventesArtisanatData.soldesEuro['Franc suisse'] = parseFloat(cleanNumber(row[4] || '0'));
-                window.ventesArtisanatData.soldesEuro['Livre sterling'] = parseFloat(cleanNumber(row[5] || '0'));
-                window.ventesArtisanatData.soldesEuro['Banque en euro'] = parseFloat(cleanNumber(row[6] || '0'));
-            }
-            
-            // Ligne 12: Total des soldes en euro (index 11)
-            if (i === 11 && row[1] && row[1].toLowerCase().includes('total')) {
-                window.ventesArtisanatData.totalSoldesEuro = parseFloat(cleanNumber(row[2] || '0'));
-            }
-        }
-        
-        console.log('✅ Données ventes/artisanat chargées avec succès');
-        
-    } catch (error) {
-        console.error('❌ Erreur chargement ventes/artisanat:', error);
-        window.ventesArtisanatData = null;
-    }
-}
     </script>
 </body>
 </html>
