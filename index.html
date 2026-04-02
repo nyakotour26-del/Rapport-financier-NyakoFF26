@@ -1387,6 +1387,7 @@
         const DETAILS_DEPENSES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1011617752&single=true&output=csv';
         const DONS_MEMBRES_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=794394744&single=true&output=csv';
         const VENTES_DETAILS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=1469962647&single=true&output=csv';
+        const PRETEURS_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&single=true&output=csv';
         const CORRECT_PASSWORD = 'finadmin';
         
         let sheetData = [];
@@ -1630,14 +1631,12 @@
             }
         }
         
-        // Fonction pour charger les prêteurs depuis la nouvelle source
+        // Fonction pour charger les prêteurs depuis la nouvelle source avec la colonne I (échéance/date de paiement)
         async function loadPreteursFromNewSource() {
             try {
-                const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSrF0hs00W-QvR3v5wxZA1ceGEx4xWR0dJv5kF3zgab6YVV00OehcwxYg-EJfOrMqj4IJnDl649SIkg/pub?gid=389673297&output=csv';
-                
                 console.log('Chargement des prêteurs depuis nouvelle source...');
                 
-                const response = await fetch(csvUrl);
+                const response = await fetch(PRETEURS_URL);
                 if (!response.ok) {
                     throw new Error(`Erreur chargement prêteurs: ${response.status}`);
                 }
@@ -1650,7 +1649,7 @@
                 // Parcourir les lignes à partir de la ligne 4 (index 3)
                 for (let i = 3; i < lines.length; i++) {
                     const row = lines[i];
-                    if (row && row.length >= 8) {
+                    if (row && row.length >= 9) {
                         const nomPreteur = row[0] ? row[0].trim() : ''; // Colonne A
                         
                         if (nomPreteur && nomPreteur !== '' && !nomPreteur.toUpperCase().includes('TOTAL')) {
@@ -1668,6 +1667,8 @@
                             const banqueEuro = parseFloat(cleanNumber(row[6] || '0'));
                             // Colonne H: total en euro après conversion des devises
                             const totalEuro = parseFloat(cleanNumber(row[7] || '0'));
+                            // Colonne I: échéance ou date de paiement
+                            const echeance = row[8] ? row[8].trim() : '';
                             
                             // Ajouter seulement s'il y a au moins un montant non nul
                             if (ariary !== 0 || ariaryEnEuro !== 0 || euro !== 0 || francSuisse !== 0 || livre !== 0 || banqueEuro !== 0 || totalEuro !== 0) {
@@ -1679,7 +1680,8 @@
                                     'Franc Suisse': francSuisse,
                                     'Livre': livre,
                                     'Banque Euro': banqueEuro,
-                                    'Total Euro': totalEuro
+                                    'Total Euro': totalEuro,
+                                    'Echeance': echeance
                                 });
                             }
                         }
@@ -1687,6 +1689,9 @@
                 }
                 
                 console.log('✅ Prêteurs chargés depuis nouvelle source:', preteursFromNewSource.length, 'personne(s)');
+                if (preteursFromNewSource.length > 0) {
+                    console.log('   - Exemple avec échéance:', preteursFromNewSource[0].tiers, '→', preteursFromNewSource[0].Echeance);
+                }
                 
             } catch (error) {
                 console.error('❌ Erreur chargement prêteurs nouvelle source:', error);
@@ -3371,7 +3376,7 @@ async function loadDetailsDepenses() {
                 let totalPromesse = 0, totalPaye = 0, totalReste = 0;
                 
                 donsMembresData.forEach(item => {
-                    html += '   <tr>';
+                    html += '   </tr>';
                     html += `    <td>${item.membre}</td>`;
                     html += `    <td class="montant-cell">${formatNumberWithUnit(item.promesse, 'Euro')}</td>`;
                     html += `    <td class="montant-cell">${formatNumberWithUnit(item.paye, 'Euro')}</td>`;
@@ -3547,7 +3552,7 @@ async function loadDetailsDepenses() {
                     html += `<td class="montant-cell">${formatNumberWithUnit(item['Franc Suisse'], 'Franc Suisse')}    </td>`;
                     html += `<td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
                     html += `<td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
-                    html += '</tr>';
+                    html += '  </tr>';
                     
                     totalAriary += item.Ariary;
                     totalEuro += item.Euro;
@@ -3563,7 +3568,7 @@ async function loadDetailsDepenses() {
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalSuisse, 'Franc Suisse')}    </td>`;
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalLivre, 'Livre')}    </td>`;
                 html += `<td class="montant-cell">${formatNumberWithUnit(totalBanque, 'Banque Euro')}    </td>`;
-                html += '</tr>';
+                html += '  </tr>';
                 
                 html += '</table>';
                 content.innerHTML = html;
@@ -3841,7 +3846,7 @@ async function loadDetailsDepenses() {
     html += '</div>';
     
     // ============================================
-    // LISTE DES PRÊTEURS (pour Emprunt) - NOUVELLE SOURCE AVEC COLONNE H (TOTAL EURO)
+    // LISTE DES PRÊTEURS (pour Emprunt) - NOUVELLE SOURCE AVEC COLONNE H (TOTAL EURO) ET COLONNE I (ÉCHÉANCE)
     // ============================================
     if (title === 'Emprunt' && preteursFromNewSource && preteursFromNewSource.length > 0) {
         html += '<div class="tiers-section" style="margin-top: 20px; border-top: 2px solid #e74c3c; padding-top: 15px;">';
@@ -3857,6 +3862,7 @@ async function loadDetailsDepenses() {
         html += '  <th>Livre</th>';
         html += '  <th>Banque Euro</th>';
         html += '  <th>TOTAL EURO (H)</th>';
+        html += '  <th>ÉCHÉANCE / DATE PAIEMENT</th>';
         html += '</tr></thead><tbody>';
         
         let totalAriary = 0, totalAriaryEnEuro = 0, totalEuro = 0, totalFrancSuisse = 0, totalLivre = 0, totalBanqueEuro = 0, totalGeneralEuro = 0;
@@ -3871,6 +3877,7 @@ async function loadDetailsDepenses() {
             html += `  <td class="montant-cell">${formatNumberWithUnit(item.Livre, 'Livre')}    </td>`;
             html += `  <td class="montant-cell">${formatNumberWithUnit(item['Banque Euro'], 'Banque Euro')}    </td>`;
             html += `  <td class="montant-cell"><strong>${formatNumberWithUnit(item['Total Euro'], 'Euro')}</strong>    </td>`;
+            html += `  <td class="montant-cell" style="text-align:left;">${item.Echeance || '-'}    </td>`;
             html += '     </tr>';
             
             totalAriary += item.Ariary;
@@ -4568,7 +4575,7 @@ html += '</tr>';
                      <td>${formatNumberWithUnit(totalBanqueCollecte, 'Banque Euro')}    </td>
                      <td>${formatNumberWithUnit(totalBanqueDon, 'Banque Euro')}    </td>
                      <td>${formatNumberWithUnit(totalBanqueDepenses, 'Banque Euro')}    </td>
-                   </tr>
+                   <tr>
             `;
             
             html += `
